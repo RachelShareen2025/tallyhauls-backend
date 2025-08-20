@@ -3,16 +3,16 @@ import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 
 export default function Auth() {
-  const [mode, setMode] = useState('login'); // login | signup
+  const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const navigate = useNavigate();
 
-  // Production-ready dashboard URL
   const DASHBOARD_URL = process.env.REACT_APP_DASHBOARD_URL || 'https://app.tallyhauls.com/dashboard';
 
+  // Listen for auth state changes to auto-redirect
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.access_token) navigate('/dashboard', { replace: true });
@@ -20,6 +20,7 @@ export default function Auth() {
     return () => sub?.subscription?.unsubscribe?.();
   }, [navigate]);
 
+  // Throttle magic link sending locally
   const throttleMagic = () => {
     const last = +localStorage.getItem('magicLastSent') || 0;
     if (Date.now() - last < 60_000) {
@@ -30,15 +31,16 @@ export default function Auth() {
     return true;
   };
 
+  // SIGNUP
   const handleSignup = async (e) => {
     e?.preventDefault();
     setLoading(true);
     setMsg('');
     try {
-      // Signup with email/password
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
-      setMsg('Signup successful! Redirecting...');
+      setMsg('Signup successful! You can now log in.');
+      setMode('login');
     } catch (err) {
       setMsg(err.message || 'Signup failed');
     } finally {
@@ -46,15 +48,16 @@ export default function Auth() {
     }
   };
 
+  // LOGIN with email/password
   const handleLogin = async (e) => {
     e?.preventDefault();
     setLoading(true);
     setMsg('');
     try {
-      // Login with email/password
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       setMsg('Login successful! Redirecting...');
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setMsg(err.message || 'Login failed');
     } finally {
@@ -62,6 +65,7 @@ export default function Auth() {
     }
   };
 
+  // MAGIC LINK LOGIN
   const sendMagicLink = async () => {
     if (!throttleMagic()) return;
     setLoading(true);
@@ -69,7 +73,7 @@ export default function Auth() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: DASHBOARD_URL } // Production redirect
+        options: { emailRedirectTo: DASHBOARD_URL },
       });
       if (error) throw error;
       setMsg('Magic link sent! Check your email.');
@@ -93,18 +97,21 @@ export default function Auth() {
           placeholder="Email"
           className="w-full p-2 mb-3 border"
         />
-        <input
-          type="password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-          placeholder="Password"
-          className="w-full p-2 mb-3 border"
-        />
-        <div className="flex gap-2">
+        {mode !== 'magic' && (
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            placeholder="Password"
+            className="w-full p-2 mb-3 border"
+          />
+        )}
+        <div className="flex flex-col sm:flex-row gap-2">
           <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">
             {mode === 'login' ? 'Login' : 'Sign up'}
           </button>
+
           <button
             type="button"
             onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
@@ -112,6 +119,7 @@ export default function Auth() {
           >
             {mode === 'login' ? 'Switch to signup' : 'Switch to login'}
           </button>
+
           <button
             type="button"
             onClick={sendMagicLink}
@@ -121,6 +129,7 @@ export default function Auth() {
           </button>
         </div>
       </form>
+
       {msg && <p className="mt-4 text-sm">{msg}</p>}
     </div>
   );
