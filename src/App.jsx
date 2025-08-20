@@ -6,9 +6,9 @@ import ProtectedRoute from './Components/ProtectedRoute';
 
 export default function App() {
   return (
-    <BrowserRouter basename={process.env.PUBLIC_URL}>
+    <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Auth />} />
+        <Route path="/" element={<Auth />} />
         <Route
           path="/dashboard"
           element={
