@@ -10,6 +10,9 @@ export default function Auth() {
   const [msg, setMsg] = useState('');
   const navigate = useNavigate();
 
+  // Production-ready dashboard URL
+  const DASHBOARD_URL = process.env.REACT_APP_DASHBOARD_URL || 'https://app.tallyhauls.com/dashboard';
+
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.access_token) navigate('/dashboard', { replace: true });
@@ -32,6 +35,7 @@ export default function Auth() {
     setLoading(true);
     setMsg('');
     try {
+      // Signup with email/password
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
       setMsg('Signup successful! Redirecting...');
@@ -47,6 +51,7 @@ export default function Auth() {
     setLoading(true);
     setMsg('');
     try {
+      // Login with email/password
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       setMsg('Login successful! Redirecting...');
@@ -62,7 +67,10 @@ export default function Auth() {
     setLoading(true);
     setMsg('');
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email });
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: DASHBOARD_URL } // Production redirect
+      });
       if (error) throw error;
       setMsg('Magic link sent! Check your email.');
     } catch (err) {
@@ -77,14 +85,40 @@ export default function Auth() {
       <h2 className="text-xl mb-4">{mode === 'login' ? 'Login' : 'Sign up'}</h2>
 
       <form onSubmit={mode === 'login' ? handleLogin : handleSignup}>
-        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="Email" className="w-full p-2 mb-3 border" />
-        <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Password" className="w-full p-2 mb-3 border" />
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          required
+          placeholder="Email"
+          className="w-full p-2 mb-3 border"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+          placeholder="Password"
+          className="w-full p-2 mb-3 border"
+        />
         <div className="flex gap-2">
-          <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">{mode === 'login' ? 'Login' : 'Sign up'}</button>
-          <button type="button" onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} className="px-3 py-2 border rounded">
+          <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">
+            {mode === 'login' ? 'Login' : 'Sign up'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+            className="px-3 py-2 border rounded"
+          >
             {mode === 'login' ? 'Switch to signup' : 'Switch to login'}
           </button>
-          <button type="button" onClick={sendMagicLink} className="px-3 py-2 border rounded">Magic Link</button>
+          <button
+            type="button"
+            onClick={sendMagicLink}
+            className="px-3 py-2 border rounded"
+          >
+            Magic Link
+          </button>
         </div>
       </form>
       {msg && <p className="mt-4 text-sm">{msg}</p>}
