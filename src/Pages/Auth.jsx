@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 
 export default function Auth() {
-  const [mode, setMode] = useState('login'); // 'login' | 'signup'
+  const [mode, setMode] = useState('login'); // 'login' or 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -12,7 +12,7 @@ export default function Auth() {
 
   const DASHBOARD_URL = process.env.REACT_APP_DASHBOARD_URL || 'https://app.tallyhauls.com/dashboard';
 
-  // Listen for auth state changes to auto-redirect
+  // Redirect if already logged in
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.access_token) navigate('/dashboard', { replace: true });
@@ -20,27 +20,15 @@ export default function Auth() {
     return () => sub?.subscription?.unsubscribe?.();
   }, [navigate]);
 
-  // Throttle magic link sending locally
-  const throttleMagic = () => {
-    const last = +localStorage.getItem('magicLastSent') || 0;
-    if (Date.now() - last < 60_000) {
-      setMsg('Wait 60s before sending another magic link.');
-      return false;
-    }
-    localStorage.setItem('magicLastSent', Date.now().toString());
-    return true;
-  };
-
-  // SIGNUP
+  // Email/password signup
   const handleSignup = async (e) => {
-    e?.preventDefault();
+    e.preventDefault();
     setLoading(true);
     setMsg('');
     try {
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
-      setMsg('Signup successful! You can now log in.');
-      setMode('login');
+      setMsg('Signup successful! Please check your email for verification.');
     } catch (err) {
       setMsg(err.message || 'Signup failed');
     } finally {
@@ -48,9 +36,9 @@ export default function Auth() {
     }
   };
 
-  // LOGIN with email/password
+  // Email/password login
   const handleLogin = async (e) => {
-    e?.preventDefault();
+    e.preventDefault();
     setLoading(true);
     setMsg('');
     try {
@@ -65,9 +53,8 @@ export default function Auth() {
     }
   };
 
-  // MAGIC LINK LOGIN
+  // Optional magic link (rate limit prone)
   const sendMagicLink = async () => {
-    if (!throttleMagic()) return;
     setLoading(true);
     setMsg('');
     try {
@@ -86,7 +73,7 @@ export default function Auth() {
 
   return (
     <div className="max-w-md mx-auto p-6">
-      <h2 className="text-xl mb-4">{mode === 'login' ? 'Login' : 'Sign up'}</h2>
+      <h2 className="text-xl mb-4">{mode === 'login' ? 'Login' : 'Sign Up'}</h2>
 
       <form onSubmit={mode === 'login' ? handleLogin : handleSignup}>
         <input
@@ -97,19 +84,22 @@ export default function Auth() {
           placeholder="Email"
           className="w-full p-2 mb-3 border"
         />
-        {mode !== 'magic' && (
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            placeholder="Password"
-            className="w-full p-2 mb-3 border"
-          />
-        )}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">
-            {mode === 'login' ? 'Login' : 'Sign up'}
+        <input
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+          placeholder="Password"
+          className="w-full p-2 mb-3 border"
+        />
+
+        <div className="flex gap-2 mb-2">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+            disabled={loading}
+          >
+            {mode === 'login' ? 'Login' : 'Sign Up'}
           </button>
 
           <button
@@ -117,7 +107,7 @@ export default function Auth() {
             onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
             className="px-3 py-2 border rounded"
           >
-            {mode === 'login' ? 'Switch to signup' : 'Switch to login'}
+            {mode === 'login' ? 'Switch to Sign Up' : 'Switch to Login'}
           </button>
 
           <button
