@@ -20,26 +20,28 @@ export default function Auth() {
   };
 
   return (
-    <div className="max-w-md mx-auto p-6">
-      <h2 className="text-xl mb-4">Login / Sign Up</h2>
-      <form onSubmit={handleMagicLink}>
-        <input
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full p-2 mb-3 border"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded w-full"
-        >
-          {loading ? "Sending..." : "Send Magic Link"}
-        </button>
-      </form>
-      {msg && <p className="mt-4 text-sm">{msg}</p>}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="bg-white shadow-md rounded-lg p-8 w-full max-w-md">
+        <h2 className="text-2xl font-semibold mb-6 text-center">Login / Sign Up</h2>
+        <form onSubmit={handleMagicLink}>
+          <input
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full p-3 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors"
+          >
+            {loading ? "Sending..." : "Send Magic Link"}
+          </button>
+        </form>
+        {msg && <p className="mt-4 text-sm text-center text-gray-700">{msg}</p>}
+      </div>
     </div>
   );
 }

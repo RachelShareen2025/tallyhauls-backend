@@ -47,34 +47,41 @@ export default function Dashboard() {
     navigate('/login', { replace: true });
   };
 
-  if (!user) return <div>Loading user...</div>;
+  if (!user) return <div className="flex justify-center items-center h-screen">Loading user...</div>;
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl">Welcome, {user.email}</h1>
-        <button onClick={logout} className="px-3 py-2 border">Log out</button>
-      </div>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6">
+      <div className="w-full max-w-md bg-white shadow-md rounded-lg p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold">Welcome, {user.email}</h1>
+          <button 
+            onClick={logout} 
+            className="px-3 py-2 border rounded hover:bg-gray-100 transition"
+          >
+            Log out
+          </button>
+        </div>
 
-      <div className="mt-6">
-        <input
-          placeholder="Company"
-          value={company}
-          onChange={e => setCompany(e.target.value)}
-          className="w-full p-2 border mb-3"
-        />
-        <input
-          placeholder="Phone"
-          value={phone}
-          onChange={e => setPhone(e.target.value)}
-          className="w-full p-2 border mb-3"
-        />
-        <button
-          onClick={handleSave}
-          className="px-4 py-2 bg-green-600 text-white rounded"
-        >
-          Save
-        </button>
+        <div className="flex flex-col">
+          <input
+            placeholder="Company"
+            value={company}
+            onChange={e => setCompany(e.target.value)}
+            className="w-full p-3 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <input
+            placeholder="Phone"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            className="w-full p-3 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <button
+            onClick={handleSave}
+            className="w-full px-4 py-3 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition"
+          >
+            Save
+          </button>
+        </div>
       </div>
     </div>
   );
