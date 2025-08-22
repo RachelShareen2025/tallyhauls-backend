@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { signInWithMagicLink } from "../auth"; // Correct relative path
+import { signInWithMagicLink } from "../auth"; // keep your path
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -20,27 +20,38 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white shadow-md rounded-lg p-8 w-full max-w-md">
-        <h2 className="text-2xl font-semibold mb-6 text-center">Login / Sign Up</h2>
-        <form onSubmit={handleMagicLink}>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      {/* Centered card */}
+      <div className="bg-white shadow-xl rounded-2xl p-8 sm:p-10 w-full max-w-sm">
+        <h1 className="text-3xl font-bold text-blue-600 text-center mb-6">TallyHauls</h1>
+        <h2 className="text-xl font-medium text-gray-700 text-center mb-6">
+          Login or Sign Up
+        </h2>
+
+        <form onSubmit={handleMagicLink} className="flex flex-col gap-4">
           <input
             type="email"
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full p-3 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
           />
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors"
+            className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
           >
             {loading ? "Sending..." : "Send Magic Link"}
           </button>
         </form>
-        {msg && <p className="mt-4 text-sm text-center text-gray-700">{msg}</p>}
+
+        {msg && (
+          <p className="mt-4 text-center text-gray-600 text-sm break-words">
+            {msg}
+          </p>
+        )}
       </div>
     </div>
   );
