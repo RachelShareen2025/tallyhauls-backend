@@ -71,13 +71,17 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6 flex flex-col items-center">
-      <div className="bg-yellow-100 border-l-4 border-yellow-400 text-yellow-700 p-4 mb-6 rounded w-full max-w-md text-center">
+      {/* Trial Banner */}
+      <div className="bg-yellow-100 border-l-4 border-yellow-400 text-yellow-700 p-4 mb-6 rounded text-center max-w-md w-full">
         You have <strong>5 days</strong> left in your free trial!
       </div>
 
-      <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-6 mb-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-blue-600">Welcome, {user.email}</h1>
+      {/* Profile & Logout */}
+      <div className="bg-white shadow-xl rounded-2xl p-6 mb-6 max-w-md w-full flex flex-col items-center">
+        <div className="flex flex-col items-center w-full gap-4 mb-4">
+          <h1 className="text-2xl font-bold text-blue-600 text-center">
+            Welcome, {user.email}
+          </h1>
           <button
             onClick={logout}
             className="px-3 py-2 border rounded hover:bg-gray-100 transition"
@@ -86,7 +90,7 @@ export default function Dashboard() {
           </button>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 w-full">
           <input
             placeholder="Company"
             value={company}
@@ -108,29 +112,31 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="w-full max-w-md flex justify-end mb-4">
+      {/* Upload Button */}
+      <div className="w-full max-w-md flex justify-center mb-4">
         <button className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700 transition">
           Upload Invoice
         </button>
       </div>
 
+      {/* Invoice Table */}
       <div className="w-full max-w-4xl bg-white shadow-xl rounded-2xl overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200 text-center">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+              <th className="px-6 py-3 text-sm font-medium text-gray-500">
                 Invoice #
               </th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+              <th className="px-6 py-3 text-sm font-medium text-gray-500">
                 Carrier
               </th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+              <th className="px-6 py-3 text-sm font-medium text-gray-500">
                 Amount
               </th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+              <th className="px-6 py-3 text-sm font-medium text-gray-500">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+              <th className="px-6 py-3 text-sm font-medium text-gray-500">
                 Date Uploaded
               </th>
             </tr>

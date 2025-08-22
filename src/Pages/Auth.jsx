@@ -32,22 +32,24 @@ export default function Auth() {
       email,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo: process.env.REACT_APP_DASHBOARD_URL || "http://localhost:3000/dashboard",
+        emailRedirectTo:
+          process.env.REACT_APP_DASHBOARD_URL || "http://localhost:3000/dashboard",
       },
     });
 
     if (error) setMsg(error.message);
     else setMsg("Magic link sent! Check your email to login.");
+
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4 sm:px-6">
-      <div className="bg-white shadow-xl rounded-2xl p-8 sm:p-10 w-full max-w-sm">
-        <h1 className="text-3xl font-bold text-blue-600 text-center mb-6">TallyHauls</h1>
-        <h2 className="text-xl font-medium text-gray-700 text-center mb-6">Login or Sign Up</h2>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="bg-white shadow-xl rounded-2xl p-8 sm:p-10 w-full max-w-sm flex flex-col items-center">
+        <h1 className="text-3xl font-bold text-blue-600 mb-6">TallyHauls</h1>
+        <h2 className="text-xl font-medium text-gray-700 mb-6">Login or Sign Up</h2>
 
-        <form onSubmit={handleMagicLink} className="flex flex-col gap-4">
+        <form onSubmit={handleMagicLink} className="flex flex-col gap-4 w-full">
           <input
             type="email"
             placeholder="Enter your email"
