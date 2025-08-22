@@ -1,19 +1,40 @@
-import React, { useState } from "react";
-import { signInWithMagicLink } from "../auth"; // keep your path
+import React, { useState, useEffect } from "react";
+import { supabase } from "../supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session?.user) {
+        navigate("/dashboard", { replace: true });
+      }
+    };
+    checkSession();
+
+    // Optional: auto redirect on auth state change
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session?.user) navigate("/dashboard", { replace: true });
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
+  }, [navigate]);
 
   const handleMagicLink = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMsg("");
 
-    const result = await signInWithMagicLink(email);
-
-    if (result?.error) setMsg(result.error);
+    const { error } = await supabase.auth.signInWithOtp({ email });
+    if (error) setMsg(error.message);
     else setMsg("Magic link sent! Check your email to login.");
 
     setLoading(false);
@@ -21,7 +42,6 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      {/* Centered card */}
       <div className="bg-white shadow-xl rounded-2xl p-8 sm:p-10 w-full max-w-sm">
         <h1 className="text-3xl font-bold text-blue-600 text-center mb-6">TallyHauls</h1>
         <h2 className="text-xl font-medium text-gray-700 text-center mb-6">
@@ -37,7 +57,6 @@ export default function Auth() {
             required
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
           />
-
           <button
             type="submit"
             disabled={loading}

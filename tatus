@@ -1,0 +1,5 @@
+[33mcommit d96ad4c3d4f4782321241ed87058c51c6a33f37f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: RachelShareen2025 <tallyhauls@gmail.com>
+Date:   Fri Aug 22 16:00:58 2025 +0530
+
+    Update Auth & Dashboard UI, clean index.css, add index.js for React mounting

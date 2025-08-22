@@ -18,26 +18,38 @@ export default function Dashboard() {
   const [invoices, setInvoices] = useState(sampleInvoices);
   const navigate = useNavigate();
 
+  // Redirect if not logged in
   useEffect(() => {
-    const loadUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data?.user) return;
-      setUser(data.user);
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data?.session?.user) {
+        navigate("/", { replace: true });
+        return;
+      }
+      setUser(data.session.user);
 
+      // Load profile
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("company,phone")
-        .eq("id", data.user.id)
+        .eq("id", data.session.user.id)
         .single();
-
       if (error) console.error(error);
       if (profile) {
         setCompany(profile.company || "");
         setPhone(profile.phone || "");
       }
     };
-    loadUser();
-  }, []);
+    checkSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!session?.user) navigate("/", { replace: true });
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
+  }, [navigate]);
 
   const handleSave = async () => {
     if (!user?.id) return;
@@ -54,25 +66,25 @@ export default function Dashboard() {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    navigate("/login", { replace: true });
+    navigate("/", { replace: true });
   };
 
   if (!user)
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center min-h-screen">
         Loading user...
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 p-6 flex flex-col items-center">
       {/* Trial Banner */}
-      <div className="bg-yellow-100 border-l-4 border-yellow-400 text-yellow-700 p-4 mb-6 rounded">
+      <div className="bg-yellow-100 border-l-4 border-yellow-400 text-yellow-700 p-4 mb-6 rounded w-full max-w-md text-center">
         You have <strong>5 days</strong> left in your free trial!
       </div>
 
       {/* Profile & Logout */}
-      <div className="w-full max-w-md mx-auto bg-white shadow-xl rounded-2xl p-6 mb-6">
+      <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-6 mb-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-blue-600">
             Welcome, {user.email}
@@ -108,14 +120,14 @@ export default function Dashboard() {
       </div>
 
       {/* Upload Invoice Button */}
-      <div className="w-full max-w-md mx-auto flex justify-end mb-4">
+      <div className="w-full max-w-md flex justify-end mb-4">
         <button className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700 transition">
           Upload Invoice
         </button>
       </div>
 
       {/* Invoice Table */}
-      <div className="w-full max-w-4xl mx-auto bg-white shadow-xl rounded-2xl overflow-x-auto">
+      <div className="w-full max-w-4xl bg-white shadow-xl rounded-2xl overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>

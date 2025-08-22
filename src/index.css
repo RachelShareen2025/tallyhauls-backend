@@ -1,9 +1,9 @@
-/* index.css - Tailwind CDN setup */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Optional: improve font rendering */
+/* Optional: keep font smoothing */
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
-/* You can add any custom global styles below */
