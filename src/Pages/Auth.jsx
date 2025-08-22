@@ -8,23 +8,19 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Check if user is already logged in
+  // Auto-redirect if already logged in
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
-      if (data?.session?.user) {
-        navigate("/dashboard", { replace: true });
-      }
+      if (data?.session?.user) navigate("/dashboard", { replace: true });
     };
     checkSession();
 
-    // Optional: auto redirect on auth state change
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session?.user) navigate("/dashboard", { replace: true });
       }
     );
-
     return () => listener.subscription.unsubscribe();
   }, [navigate]);
 
@@ -33,7 +29,14 @@ export default function Auth() {
     setLoading(true);
     setMsg("");
 
-    const { error } = await supabase.auth.signInWithOtp({ email });
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: process.env.REACT_APP_DASHBOARD_URL || "http://localhost:3000/dashboard",
+      },
+    });
+
     if (error) setMsg(error.message);
     else setMsg("Magic link sent! Check your email to login.");
 
