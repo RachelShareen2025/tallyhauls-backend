@@ -1,0 +1,251 @@
+/* ===== Reset & Body ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", Arial, sans-serif;
+  background: #ffffff;
+  color: #2d3959;
+  line-height: 1.6;
+}
+
+/* ===== Navbar ===== */
+.landing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 60px;
+  background-color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.landing-logo {
+  height: 48px;
+}
+
+.landing-nav a {
+  margin-left: 28px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1rem;
+  color: #2d3959;
+  transition: color 0.2s ease;
+}
+
+.landing-nav a:hover {
+  color: #33c898;
+}
+
+.cta-btn {
+  background-color: #33c898;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.cta-btn:hover {
+  background-color: #2d3959;
+  color: #fff;
+}
+
+/* ===== Hero Section ===== */
+.hero-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 80px 60px;
+  gap: 60px;
+}
+
+.hero-left {
+  flex: 1;
+  max-width: 520px;
+}
+
+.hero-left h1 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: #2d3959;
+  margin-bottom: 20px;
+  line-height: 1.2;
+}
+
+.hero-left p {
+  font-size: 1.2rem;
+  margin-bottom: 30px;
+  color: #2d3959;
+}
+
+.hero-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hero-login-form input {
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+.hero-login-form button {
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background-color: #33c898;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.hero-login-form button:hover {
+  background-color: #2d3959;
+}
+
+.login-msg {
+  margin-top: 10px;
+  color: #2d3959;
+  font-weight: 600;
+}
+
+.hero-right img {
+  max-width: 600px;
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* ===== Features Section ===== */
+.features-section {
+  padding: 100px 60px;
+  background: #f9f9f9;
+  text-align: center;
+}
+
+.features-section h2 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #2d3959;
+  margin-bottom: 50px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+}
+
+.feature-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 30px 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+}
+
+.feature-card h3 {
+  font-size: 1.3rem;
+  color: #2d3959;
+  margin-bottom: 12px;
+}
+
+.feature-card p {
+  color: #2d3959;
+  font-size: 1rem;
+}
+
+/* ===== Contact Section ===== */
+.contact-section {
+  padding: 100px 60px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.contact-section h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 30px;
+  color: #2d3959;
+}
+
+.contact-form {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.contact-form input,
+.contact-form textarea {
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+.contact-form button {
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background-color: #33c898;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.contact-form button:hover {
+  background-color: #2d3959;
+}
+
+/* ===== Footer ===== */
+.landing-footer {
+  text-align: center;
+  padding: 30px;
+  background: #2d3959;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+  .hero-section {
+    flex-direction: column;
+    text-align: center;
+    padding: 60px 30px;
+  }
+
+  .hero-left {
+    max-width: 100%;
+  }
+
+  .hero-right img {
+    max-width: 100%;
+  }
+
+  .landing-header {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+
+  .landing-nav a {
+    margin-left: 16px;
+  }
+}

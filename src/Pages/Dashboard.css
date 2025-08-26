@@ -1,11 +1,10 @@
-/* Reset and body */
-body {
-  margin: 0;
+/* Dashboard page */
+.dashboard-container {
+  padding: 20px;
   font-family: Arial, sans-serif;
-  background: #f5f5f5;
+  background: #f9fafb;
 }
 
-/* Top bar */
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -13,6 +12,7 @@ body {
   background: #2563eb;
   color: white;
   padding: 12px 16px;
+  border-radius: 6px;
 }
 
 .logo {
@@ -27,87 +27,26 @@ body {
   padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
 }
 
 .logout-btn:hover {
   background: #f3f3f3;
 }
 
-/* Trial Banner */
 .trial-banner {
   background: #fef9c3;
   border-left: 4px solid #facc15;
   color: #854d0e;
   padding: 10px;
-  margin: 12px;
+  margin: 12px 0;
   border-radius: 6px;
   text-align: center;
   font-size: 14px;
 }
 
-/* Profile Section */
-.profile-section {
-  background: white;
-  margin: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-
-.profile-section h2 {
-  margin-top: 0;
-  font-size: 16px;
-}
-
-.profile-input {
-  display: block;
-  width: 100%;
-  padding: 8px;
-  margin: 8px 0;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-}
-
-.save-btn {
-  padding: 8px 16px;
-  background: #16a34a;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.save-btn:hover {
-  background: #15803d;
-}
-
-/* Upload Section */
-.upload-section {
-  margin: 12px;
-  text-align: right;
-}
-
-.upload-btn {
-  padding: 8px 16px;
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.upload-btn:hover {
-  background: #1d4ed8;
-}
-
-/* Table */
 .table-container {
   background: white;
-  margin: 12px;
+  margin-top: 20px;
   border-radius: 8px;
   overflow-x: auto;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
@@ -125,11 +64,6 @@ th, td {
   border-bottom: 1px solid #e5e5e5;
 }
 
-th {
-  background: #f3f3f3;
-  font-weight: 600;
-}
-
 tr:hover {
   background: #f9f9f9;
 }
@@ -144,7 +78,7 @@ tr:hover {
   font-weight: bold;
 }
 
-/* Responsive adjustments */
+/* Responsive */
 @media (max-width: 600px) {
   .top-bar {
     flex-direction: column;
@@ -154,11 +88,8 @@ tr:hover {
     margin-top: 6px;
     width: 100%;
   }
-  .upload-section {
-    text-align: left;
-  }
   table th, table td {
-    padding: 8px;
     font-size: 12px;
+    padding: 8px;
   }
 }

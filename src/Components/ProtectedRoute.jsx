@@ -40,7 +40,7 @@ export default function ProtectedRoute({ children }) {
   }, []);
 
   // While checking session
-  if (loading) return <p className="text-center mt-10">Loading...</p>;
+  if (loading) return <p className="loading-text">Loading...</p>;
 
   // Redirect if not authenticated
   if (!authenticated) return <Navigate to="/" replace />;
