@@ -1,12 +1,40 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import "./Dashboard.css";
+import { supabase } from "./supabaseClient";
 
 export default function Dashboard() {
-  // ------- Mock Data (replace with API later) -------
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("last7");
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  // ---------------- Auth Check ----------------
+  useEffect(() => {
+    // On load, check if we already have a session
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        setUser(data.session.user);
+      } else {
+        window.location.href = "/"; // redirect to landing/login
+      }
+      setLoading(false);
+    });
+
+    // Listen for login/logout changes
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+        if (!session) window.location.href = "/";
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  if (loading) return <p>Loading...</p>;
+
+  // ---------------- Mock Data (replace with API later) ----------------
   const invoices = [
     { id: "INV-10124", carrier: "Swift Logistics", amount: 1250.0, status: "Pending", date: "2025-08-20" },
     { id: "INV-10125", carrier: "RoadRunner",     amount: 980.5,  status: "Cleared", date: "2025-08-18" },
@@ -30,7 +58,7 @@ export default function Dashboard() {
     { id: "INV-10107", type: "Duplicate invoice",  severity: "low" },
   ];
 
-  // ------- KPI Metrics (derived) -------
+  // ---------------- KPI Metrics ----------------
   const kpi = useMemo(() => {
     const pending = invoices.filter(i => i.status === "Pending").length;
     const cleared = invoices.filter(i => i.status === "Cleared").length;
@@ -42,7 +70,7 @@ export default function Dashboard() {
     return { pending, cleared, errors, timeSavedHrs };
   }, [invoices]);
 
-  // ------- Filters / Table Data -------
+  // ---------------- Filters / Table Data ----------------
   const filtered = useMemo(() => {
     const now = new Date();
     const withinDate = (d) => {
@@ -63,7 +91,7 @@ export default function Dashboard() {
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [invoices, statusFilter, dateFilter, search]);
 
-  // ------- CSV Export -------
+  // ---------------- CSV Export ----------------
   const exportCSV = () => {
     const headers = ["Invoice #", "Carrier/Client", "Amount", "Status", "Date"];
     const rows = filtered.map(i => [i.id, i.carrier, i.amount, i.status, i.date]);
@@ -91,6 +119,8 @@ export default function Dashboard() {
           <a href="/auth" className="cta-btn">Logout</a>
         </nav>
       </header>
+
+      <h2 className="welcome-msg">Welcome, {user?.email} 👋</h2>
 
       {/* KPI Bar */}
       <section className="kpi-bar">

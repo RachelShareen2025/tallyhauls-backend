@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./Landing.css";
 import { supabase } from "../supabaseClient"; // Make sure this path matches your setup
 
@@ -6,6 +6,21 @@ export default function Landing() {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // 🔹 On load: check if user already has a session
+  useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        // Already logged in → go to dashboard
+        window.location.href = "/dashboard";
+      }
+    };
+    checkSession();
+  }, []);
 
   const handleMagicLink = async (e) => {
     e.preventDefault();
@@ -18,22 +33,22 @@ export default function Landing() {
     setMsg("");
 
     try {
-      const { data, error } = await supabase.auth.signInWithOtp({
-        email: email,
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
         options: {
-          emailRedirectTo: "https://tallyhauls.com/dashboard", // exact redirect URL
+          emailRedirectTo: "https://tallyhauls.com/dashboard", // ✅ redirect URL
         },
       });
 
       if (error) {
-        console.log("Supabase magic link error:", error.message);
-        setMsg("Failed to send magic link. Check console for details.");
+        console.error("Supabase magic link error:", error.message);
+        setMsg("❌ Failed to send magic link. Try again.");
       } else {
-        setMsg("Magic link sent! Check your email.");
+        setMsg("✅ Magic link sent! Check your email.");
       }
     } catch (err) {
-      console.log("Unexpected error:", err);
-      setMsg("Something went wrong. Try again.");
+      console.error("Unexpected error:", err);
+      setMsg("❌ Something went wrong. Try again.");
     } finally {
       setLoading(false);
     }
