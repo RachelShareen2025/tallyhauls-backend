@@ -34,6 +34,13 @@ export default function Dashboard() {
 
   if (loading) return <p>Loading...</p>;
 
+  // ---------------- Logout ----------------
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    window.location.href = "/";
+  };
+
   // ---------------- Mock Data (replace with API later) ----------------
   const invoices = [
     { id: "INV-10124", carrier: "Swift Logistics", amount: 1250.0, status: "Pending", date: "2025-08-20" },
@@ -116,7 +123,7 @@ export default function Dashboard() {
           <a href="/">Home</a>
           <a href="#reports">Reports</a>
           <a href="#settings">Settings</a>
-          <a href="/auth" className="cta-btn">Logout</a>
+          <button onClick={handleLogout} className="cta-btn">Logout</button>
         </nav>
       </header>
 

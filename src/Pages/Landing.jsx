@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import "./Landing.css";
-import { supabase } from "../supabaseClient"; // Make sure this path matches your setup
+import { supabase } from "../supabaseClient";
 
 export default function Landing() {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 🔹 On load: check if user already has a session
+  // ✅ On load: check if user already has a session
   useEffect(() => {
     const checkSession = async () => {
       const {
@@ -15,11 +15,22 @@ export default function Landing() {
       } = await supabase.auth.getSession();
 
       if (session) {
-        // Already logged in → go to dashboard
-        window.location.href = "/dashboard";
+        window.location.href = "/dashboard"; // already logged in
       }
     };
+
     checkSession();
+
+    // ✅ Also listen to auth changes
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session) {
+          window.location.href = "/dashboard";
+        }
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   const handleMagicLink = async (e) => {
@@ -36,7 +47,8 @@ export default function Landing() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: "https://tallyhauls.com/dashboard", // ✅ redirect URL
+          // ✅ Redirect to root so Supabase can persist session
+          emailRedirectTo: "https://tallyhauls.com/",
         },
       });
 
@@ -54,7 +66,7 @@ export default function Landing() {
     }
   };
 
-  // 🔹 Centralized text content (easy edits later)
+  // unchanged content...
   const content = {
     hero: {
       heading: "Save 10+ Hours a Week on Freight Reconciliation",
@@ -83,7 +95,7 @@ export default function Landing() {
 
   return (
     <div className="landing-container">
-      {/* Header / Navbar */}
+      {/* Header */}
       <header className="landing-header">
         <img src="/image/1.png" alt="TallyHauls Logo" className="landing-logo" />
         <nav className="landing-nav">
@@ -93,7 +105,7 @@ export default function Landing() {
         </nav>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero */}
       <section className="hero-section">
         <div className="hero-left">
           <h1>{content.hero.heading}</h1>
@@ -117,7 +129,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Features */}
       <section className="features-section" id="features">
         <h2>Features</h2>
         <div className="features-grid">
@@ -130,7 +142,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Contact Section */}
+      {/* Contact */}
       <section className="contact-section" id="contact">
         <h2>Contact Us</h2>
         <form className="contact-form" action="/auth">
