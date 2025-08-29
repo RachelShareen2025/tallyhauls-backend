@@ -57,12 +57,17 @@
   font-size: 14px;
   box-shadow: var(--shadow);
   border-radius: 0 0 var(--radius) var(--radius);
-  animation: fadeIn 0.5s ease-in-out;
+  animation: fadeIn 0.5s ease-in-out, fadeOut 0.5s ease-in-out 3s forwards;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-4px); }
 }
 
 /* KPI Bar */
