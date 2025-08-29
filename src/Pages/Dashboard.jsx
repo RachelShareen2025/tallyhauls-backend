@@ -8,24 +8,30 @@ export default function Dashboard() {
   const [dateFilter, setDateFilter] = useState("last7");
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showSecureMsg, setShowSecureMsg] = useState(false);
 
   // ---------------- Auth Check ----------------
   useEffect(() => {
-    // On load, check if we already have a session
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         setUser(data.session.user);
+        setShowSecureMsg(true);
+        setTimeout(() => setShowSecureMsg(false), 3000); // auto-hide after 3s
       } else {
-        window.location.href = "/"; // redirect to landing/login
+        window.location.href = "/";
       }
       setLoading(false);
     });
 
-    // Listen for login/logout changes
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
-        if (!session) window.location.href = "/";
+        if (session) {
+          setShowSecureMsg(true);
+          setTimeout(() => setShowSecureMsg(false), 3000);
+        } else {
+          window.location.href = "/";
+        }
       }
     );
 
@@ -41,7 +47,7 @@ export default function Dashboard() {
     window.location.href = "/";
   };
 
-  // ---------------- Mock Data (replace with API later) ----------------
+  // ---------------- Mock Data ----------------
   const invoices = [
     { id: "INV-10124", carrier: "Swift Logistics", amount: 1250.0, status: "Pending", date: "2025-08-20" },
     { id: "INV-10125", carrier: "RoadRunner",     amount: 980.5,  status: "Cleared", date: "2025-08-18" },
@@ -70,14 +76,11 @@ export default function Dashboard() {
     const pending = invoices.filter(i => i.status === "Pending").length;
     const cleared = invoices.filter(i => i.status === "Cleared").length;
     const errors  = invoices.filter(i => i.status === "Error").length;
-
-    // toy calc for time saved
     const timeSavedHrs = cleared * 2 + errors * 0.5;
-
     return { pending, cleared, errors, timeSavedHrs };
   }, [invoices]);
 
-  // ---------------- Filters / Table Data ----------------
+  // ---------------- Filters ----------------
   const filtered = useMemo(() => {
     const now = new Date();
     const withinDate = (d) => {
@@ -114,7 +117,7 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      {/* Top Bar (minimal to match landing style) */}
+      {/* Top Bar */}
       <header className="dashboard-header">
         <div className="brand">
           <img src="/image/1.png" alt="TallyHauls Logo" />
@@ -127,36 +130,31 @@ export default function Dashboard() {
         </nav>
       </header>
 
+      {/* Secure login banner */}
+      {showSecureMsg && (
+        <div className="secure-msg">
+          ✅ You are logged in securely
+        </div>
+      )}
+
       <h2 className="welcome-msg">Welcome, {user?.email} 👋</h2>
 
       {/* KPI Bar */}
       <section className="kpi-bar">
         <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="dot dot-red" />
-            <span>Pending Invoices</span>
-          </div>
+          <div className="kpi-top"><span className="dot dot-red" /><span>Pending Invoices</span></div>
           <div className="kpi-value">{kpi.pending}</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="dot dot-green" />
-            <span>Cleared Invoices</span>
-          </div>
+          <div className="kpi-top"><span className="dot dot-green" /><span>Cleared Invoices</span></div>
           <div className="kpi-value">{kpi.cleared}</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="dot dot-amber" />
-            <span>Errors Detected &amp; Fixed</span>
-          </div>
+          <div className="kpi-top"><span className="dot dot-amber" /><span>Errors Detected &amp; Fixed</span></div>
           <div className="kpi-value">{kpi.errors}</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="dot dot-blue" />
-            <span>Time Saved This Week</span>
-          </div>
+          <div className="kpi-top"><span className="dot dot-blue" /><span>Time Saved This Week</span></div>
           <div className="kpi-value">{kpi.timeSavedHrs} hrs</div>
         </div>
       </section>
@@ -164,23 +162,16 @@ export default function Dashboard() {
       {/* Activity + Discrepancies */}
       <section className="two-col">
         <div className="card">
-          <div className="card-head">
-            <h3>Recent Activity</h3>
-          </div>
+          <div className="card-head"><h3>Recent Activity</h3></div>
           <ul className="activity-list">
             {activity.map((a, idx) => (
-              <li key={idx}>
-                <span className="time">{a.time}</span>
-                <span className="text">{a.text}</span>
-              </li>
+              <li key={idx}><span className="time">{a.time}</span><span className="text">{a.text}</span></li>
             ))}
           </ul>
         </div>
 
         <div className="card">
-          <div className="card-head">
-            <h3>Error / Discrepancy Summary</h3>
-          </div>
+          <div className="card-head"><h3>Error / Discrepancy Summary</h3></div>
           <ul className="error-list">
             {discrepancies.map((d) => (
               <li key={d.id} className={`sev-${d.severity}`}>
@@ -203,11 +194,7 @@ export default function Dashboard() {
         <div className="card-head table-head">
           <h3>Invoice Reconciliation</h3>
           <div className="filters">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search invoice or carrier…"
-            />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search invoice or carrier…" />
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="all">All Statuses</option>
               <option value="Pending">Pending</option>
@@ -242,16 +229,7 @@ export default function Dashboard() {
                   <td>{i.carrier}</td>
                   <td className="right">${i.amount.toLocaleString()}</td>
                   <td>
-                    <span
-                      className={
-                        "status " +
-                        (i.status === "Cleared"
-                          ? "ok"
-                          : i.status === "Pending"
-                          ? "pending"
-                          : "err")
-                      }
-                    >
+                    <span className={"status " + (i.status === "Cleared" ? "ok" : i.status === "Pending" ? "pending" : "err")}>
                       {i.status}
                     </span>
                   </td>
@@ -272,16 +250,14 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Quick Actions (floating) */}
+      {/* Quick Actions */}
       <div className="quick-actions">
         <button className="qa-btn">Upload Invoices</button>
         <button className="qa-btn">Approve Payments</button>
         <button className="qa-btn">Generate Reports</button>
       </div>
 
-      <footer className="dash-footer">
-        © 2025 TallyHauls. All rights reserved.
-      </footer>
+      <footer className="dash-footer">© 2025 TallyHauls. All rights reserved.</footer>
     </div>
   );
 }
