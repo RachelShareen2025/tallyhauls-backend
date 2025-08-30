@@ -16,7 +16,7 @@ export default function Dashboard() {
       if (data.session) {
         setUser(data.session.user);
         setShowSecureMsg(true);
-        setTimeout(() => setShowSecureMsg(false), 3000); // auto-hide after 3s
+        setTimeout(() => setShowSecureMsg(false), 3000);
       } else {
         window.location.href = "/";
       }
@@ -113,6 +113,7 @@ export default function Dashboard() {
     a.download = "tallyhauls-invoices.csv";
     a.click();
     URL.revokeObjectURL(url);
+    alert("CSV Exported!"); // minor tweak: feedback for user
   };
 
   return (
@@ -132,7 +133,7 @@ export default function Dashboard() {
 
       {/* Secure login banner */}
       {showSecureMsg && (
-        <div className="secure-msg">
+        <div className="secure-banner">
           ✅ You are logged in securely
         </div>
       )}
@@ -164,16 +165,16 @@ export default function Dashboard() {
         <div className="card">
           <div className="card-head"><h3>Recent Activity</h3></div>
           <ul className="activity-list">
-            {activity.map((a, idx) => (
+            {activity.length > 0 ? activity.map((a, idx) => (
               <li key={idx}><span className="time">{a.time}</span><span className="text">{a.text}</span></li>
-            ))}
+            )) : <li>No activity yet.</li>}
           </ul>
         </div>
 
         <div className="card">
           <div className="card-head"><h3>Error / Discrepancy Summary</h3></div>
           <ul className="error-list">
-            {discrepancies.map((d) => (
+            {discrepancies.length > 0 ? discrepancies.map((d) => (
               <li key={d.id} className={`sev-${d.severity}`}>
                 <div className="err-main">
                   <span className={`badge ${d.severity}`}>{d.type}</span>
@@ -184,7 +185,7 @@ export default function Dashboard() {
                   <button className="btn-text">Flag</button>
                 </div>
               </li>
-            ))}
+            )) : <li>No discrepancies.</li>}
           </ul>
         </div>
       </section>
@@ -210,7 +211,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="table-wrap">
+        <div className="table-wrap" title="Scroll horizontally if needed">
           <table className="data-table">
             <thead>
               <tr>
@@ -223,7 +224,7 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((i) => (
+              {filtered.length > 0 ? filtered.map((i) => (
                 <tr key={i.id}>
                   <td>{i.id}</td>
                   <td>{i.carrier}</td>
@@ -239,8 +240,7 @@ export default function Dashboard() {
                     <button className="btn-text small">Flag</button>
                   </td>
                 </tr>
-              ))}
-              {filtered.length === 0 && (
+              )) : (
                 <tr>
                   <td colSpan="6" className="empty">No invoices match your filters.</td>
                 </tr>

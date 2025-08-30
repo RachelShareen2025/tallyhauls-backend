@@ -237,11 +237,27 @@
   border-radius:8px;
   padding:8px 10px;
   font-size:14px;
-  min-width: 180px;
+  min-width: 150px; /* minor tweak */
 }
 
-.table-wrap{ width:100%; overflow:auto; }
+.table-wrap{
+  width:100%;
+  overflow:auto;
+  position: relative;
+}
 
+.table-wrap::after{
+  content:"";
+  position:absolute;
+  right:0;
+  top:0;
+  width:20px;
+  height:100%;
+  pointer-events:none;
+  background: linear-gradient(to left, var(--bg), transparent);
+}
+
+/* Rest of data table remains same */
 .data-table{
   width:100%;
   border-collapse: collapse;
@@ -319,5 +335,17 @@
   .dashboard-header{ padding:12px 16px; }
   .kpi-bar, .two-col{ padding: 16px; }
   .card-head{ padding:12px 12px 8px; }
-  .filters input, .filters select{ min-width: 140px; }
+  .filters input, .filters select{ min-width: 120px; }
+}
+
+/* Quick actions tweak for very small screens */
+@media (max-width: 400px){
+  .quick-actions{
+    right: 8px;
+    bottom: 8px;
+  }
+  .qa-btn{
+    padding:8px 10px;
+    font-size:12px;
+  }
 }
