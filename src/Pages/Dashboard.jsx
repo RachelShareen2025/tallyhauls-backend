@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import "./Dashboard.css";
-import { supabase } from "./supabaseClient";
+import { supabase } from "../supabaseClient"; // <-- updated path (Dashboard.jsx is in src/Pages)
 
 export default function Dashboard() {
+  // ---------- state & refs (hooks must remain in stable order) ----------
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("last7");
@@ -15,59 +16,58 @@ export default function Dashboard() {
 
   const fileInputRef = useRef(null);
 
-  // ---------------- Auth Check ----------------
+  // ---------- Auth check ----------
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      if (data.session) {
-        setUser(data.session.user);
-        setShowSecureMsg(true);
-        setTimeout(() => setShowSecureMsg(false), 3000);
-      } else {
-        window.location.href = "/";
-      }
-      setLoading(false);
-    }).catch(err => {
-      console.error("Session error:", err);
-      setLoading(false);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+    supabase.auth.getSession()
+      .then(({ data }) => {
         if (!mounted) return;
-        setUser(session?.user ?? null);
-        if (session) {
+        if (data?.session) {
+          setUser(data.session.user);
           setShowSecureMsg(true);
           setTimeout(() => setShowSecureMsg(false), 3000);
         } else {
           window.location.href = "/";
         }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Session error:", err);
+        setLoading(false);
+      });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      setUser(session?.user ?? null);
+      if (session) {
+        setShowSecureMsg(true);
+        setTimeout(() => setShowSecureMsg(false), 3000);
+      } else {
+        window.location.href = "/";
       }
-    );
+    });
 
     return () => {
       mounted = false;
-      listener.subscription.unsubscribe();
+      try { listener.subscription.unsubscribe(); } catch (e) { /* ignore */ }
     };
   }, []);
 
-  // ---------------- Initial load (attempt supabase, fallback to mock) ----------------
+  // ---------- Initial data load (Supabase if available, fallback to mock) ----------
   useEffect(() => {
     (async () => {
       try {
-        const { data: invs, error } = await supabase.from("invoices").select("*").order("created_at", { ascending: false }).limit(200);
-        if (!error && invs && invs.length > 0) {
-          // map possible server fields to local shape
+        const { data: invs, error: invErr } = await supabase.from("invoices").select("*").order("created_at", { ascending: false }).limit(200);
+        if (!invErr && invs && invs.length > 0) {
           setInvoices(invs.map(row => ({
             id: row.id ?? row.invoice_number ?? `INV-${Math.floor(Math.random()*100000)}`,
             carrier: row.carrier ?? row.client ?? "Unknown",
             amount: typeof row.amount === "number" ? row.amount : parseFloat(row.amount) || 0,
             status: row.status ?? "Pending",
-            date: row.date ? row.date.split("T")[0] : (row.created_at ? row.created_at.split("T")[0] : new Date().toISOString().slice(0,10))
+            date: row.date ? (String(row.date).split("T")[0]) : (row.created_at ? String(row.created_at).split("T")[0] : new Date().toISOString().slice(0,10))
           })));
         } else {
-          // fallback mock data
+          // fallback mock
           setInvoices([
             { id: "INV-10124", carrier: "Swift Logistics", amount: 1250.0, status: "Pending", date: "2025-08-20" },
             { id: "INV-10125", carrier: "RoadRunner",     amount: 980.5,  status: "Cleared", date: "2025-08-18" },
@@ -79,7 +79,7 @@ export default function Dashboard() {
           ]);
         }
 
-        // load recent activity if available
+        // activity
         const { data: acts } = await supabase.from("user_activity").select("*").order("timestamp", { ascending: false }).limit(50);
         if (acts && acts.length > 0) {
           setActivity(acts.map(a => ({ time: new Date(a.timestamp).toLocaleString(), text: a.action })));
@@ -92,7 +92,7 @@ export default function Dashboard() {
           ]);
         }
 
-        // load discrepancies if available
+        // discrepancies
         const { data: dis } = await supabase.from("discrepancies").select("*").order("created_at", { ascending: false }).limit(100);
         if (dis && dis.length > 0) {
           setDiscrepancies(dis.map(d => ({ id: d.invoice_id ?? d.invoice_number ?? d.id, type: d.type, severity: d.severity ?? "medium" })));
@@ -104,15 +104,14 @@ export default function Dashboard() {
           ]);
         }
       } catch (err) {
-        console.error("Initial load failed, using mock data", err);
-        // fallback mocks already handled above if select failed
+        console.error("Initial load failed, using fallback mocks:", err);
+      } finally {
+        // don't change loading here; auth useEffect controls it
       }
     })();
   }, []);
 
-  if (loading) return <p>Loading...</p>;
-
-  // ---------------- Tracking helper ----------------
+  // ---------- Utility: unified tracker (updates UI and attempts to persist) ----------
   const trackAction = async (actionText) => {
     const time = "Just now";
     setActivity(prev => [{ time, text: actionText }, ...prev].slice(0, 50));
@@ -124,32 +123,33 @@ export default function Dashboard() {
     }
   };
 
-  // ---------------- Logout ----------------
+  // ---------- Auth / Logout ----------
   const handleLogout = async () => {
     trackAction("Logged out");
-    await supabase.auth.signOut();
+    try { await supabase.auth.signOut(); } catch (e) { /* ignore */ }
     setUser(null);
     window.location.href = "/";
   };
 
-  // ---------------- Approve & Flag ----------------
+  // ---------- Approve & Flag (optimistic UI first, persist later) ----------
   const handleApprove = async (invoiceId) => {
     // optimistic UI update
     setInvoices(prev => prev.map(i => i.id === invoiceId ? { ...i, status: 'Cleared' } : i));
     setDiscrepancies(prev => prev.filter(d => d.id !== invoiceId));
     trackAction(`Approved invoice ${invoiceId}`);
 
-    // persist to Supabase safely
+    // persist to Supabase (background)
     try {
       await supabase.from("invoices").update({ status: "Cleared", updated_at: new Date().toISOString() }).eq("id", invoiceId);
-      await supabase.from("user_activity").insert([{ user_id: user?.id, action: `Approved invoice ${invoiceId}` }]);
+      if (user) await supabase.from("user_activity").insert([{ user_id: user.id, action: `Approved invoice ${invoiceId}` }]);
     } catch (err) {
       console.error("Failed to persist approve:", err);
+      // optionally: add rollback logic here if persistence fails
     }
   };
 
   const handleFlag = async (invoiceId) => {
-    // optimistic add to discrepancy if missing
+    // optimistic add if not present
     setDiscrepancies(prev => {
       if (!prev.find(d => d.id === invoiceId)) {
         return [{ id: invoiceId, type: "Flagged", severity: "medium" }, ...prev];
@@ -158,30 +158,24 @@ export default function Dashboard() {
     });
     trackAction(`Flagged invoice ${invoiceId}`);
 
-    // persist to Supabase safely
     try {
       await supabase.from("discrepancies").insert([{ invoice_id: invoiceId, type: "Flagged", severity: "medium", user_id: user?.id }]);
-      await supabase.from("user_activity").insert([{ user_id: user?.id, action: `Flagged invoice ${invoiceId}` }]);
+      if (user) await supabase.from("user_activity").insert([{ user_id: user.id, action: `Flagged invoice ${invoiceId}` }]);
     } catch (err) {
-      // allow duplicates/failures — don't break UI
       console.error("Failed to persist flag:", err);
     }
   };
 
-  // ---------------- Quick Actions ----------------
+  // ---------- CSV parser & file upload (CSV + OCR placeholder) ----------
   const parseCSV = (text) => {
-    // Basic CSV parser - expects header row: id,carrier,amount,status,date  (flexible)
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     if (lines.length <= 1) return [];
     const header = lines[0].split(",").map(h => h.trim().toLowerCase());
     const rows = lines.slice(1);
-    const result = rows.map(row => {
+    return rows.map(row => {
       const cols = row.split(",").map(c => c.trim());
       const obj = {};
-      for (let i = 0; i < header.length; i++) {
-        obj[header[i]] = cols[i] ?? "";
-      }
-      // map to local invoice shape
+      for (let i = 0; i < header.length; i++) obj[header[i]] = cols[i] ?? "";
       return {
         id: obj.id || obj.invoice_number || `INV-${Math.floor(Math.random()*100000)}`,
         carrier: obj.carrier || obj.client || "Unknown",
@@ -190,62 +184,131 @@ export default function Dashboard() {
         date: (obj.date || new Date().toISOString().slice(0,10)).slice(0,10),
       };
     });
-    return result;
   };
 
   const handleFileUpload = async (file) => {
     if (!file) return;
+    // CSV handling
+    if (file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv")) {
+      try {
+        const text = await file.text();
+        const newInvoices = parseCSV(text);
+        if (newInvoices.length === 0) {
+          alert("No invoices found in CSV. Ensure headers and rows exist.");
+          return;
+        }
+        setInvoices(prev => [...newInvoices, ...prev]);
+        trackAction(`Uploaded ${newInvoices.length} invoices via CSV`);
+        // attempt batch insert (best-effort)
+        try {
+          const payload = newInvoices.map(inv => ({
+            id: inv.id,
+            invoice_number: inv.id,
+            carrier: inv.carrier,
+            amount: inv.amount,
+            status: inv.status,
+            date: inv.date,
+            created_at: new Date().toISOString()
+          }));
+          await supabase.from("invoices").insert(payload);
+        } catch (err) {
+          console.error("Supabase insert failed for uploaded invoices:", err);
+        }
+      } catch (err) {
+        console.error("Reading CSV failed:", err);
+        alert("Failed to read CSV. Check file and try again.");
+      }
+      return;
+    }
+
+    // Non-CSV (image/pdf) => upload to storage and call OCR endpoint (placeholder)
+    await uploadFileToStorageAndRunOCR(file);
+  };
+
+  const uploadFileToStorageAndRunOCR = async (file) => {
+    if (!file) return;
+    const folder = `uploads/${user?.id ?? "anon"}`;
+    const filePath = `${folder}/${Date.now()}_${file.name.replace(/\s/g,"_")}`;
     try {
-      const text = await file.text();
-      const newInvoices = parseCSV(text);
-      if (newInvoices.length === 0) {
-        alert("No invoices found in CSV. Ensure you have headers and rows.");
+      // upload to Supabase storage (bucket must exist)
+      const { error: uploadErr } = await supabase.storage.from("invoices-files").upload(filePath, file, { upsert: false });
+      if (uploadErr) {
+        console.error("Storage upload error:", uploadErr);
+        alert("Upload failed (storage). Check bucket/permissions.");
         return;
       }
-      // optimistic UI -> add newest on top
-      setInvoices(prev => [...newInvoices, ...prev]);
-      trackAction(`Uploaded ${newInvoices.length} invoices via CSV`);
+      trackAction(`Uploaded ${file.name} to storage; starting OCR`);
 
-      // attempt batch insert to Supabase
+      // call server-side OCR endpoint (you must implement /api/ocr or Supabase function)
       try {
-        // attempt to insert mapping to likely server columns
-        const payload = newInvoices.map(inv => ({
-          id: inv.id, // careful: if server expects UUID this may fail
-          invoice_number: inv.id,
-          carrier: inv.carrier,
-          amount: inv.amount,
-          status: inv.status,
-          date: inv.date,
-          created_at: new Date().toISOString()
-        }));
-        await supabase.from("invoices").insert(payload);
+        const res = await fetch("/api/ocr", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: filePath })
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("OCR endpoint error:", text);
+          alert("OCR failed. Check server logs.");
+          return;
+        }
+        const json = await res.json();
+        if (json.parsed) {
+          // json.parsed can be an array or single object
+          const parsedArr = Array.isArray(json.parsed) ? json.parsed : [json.parsed];
+          // normalize parsed items into invoice shape
+          const normalized = parsedArr.map(p => ({
+            id: p.id || p.invoice_number || `INV-${Math.floor(Math.random()*100000)}`,
+            carrier: p.carrier || p.vendor || "Unknown",
+            amount: p.total || p.amount || 0,
+            status: p.status || "Pending",
+            date: p.date || new Date().toISOString().slice(0,10)
+          }));
+          setInvoices(prev => [...normalized, ...prev]);
+          trackAction(`OCR parsed ${normalized.length} invoice(s) from ${file.name}`);
+        } else {
+          alert("OCR completed but no invoice data found.");
+        }
       } catch (err) {
-        console.error("Supabase insert failed for uploaded invoices:", err);
+        console.error("OCR call failed:", err);
+        alert("OCR endpoint call failed.");
       }
     } catch (err) {
-      console.error("Reading file failed:", err);
-      alert("Failed to read file. Check file type and try again.");
+      console.error("uploadFileToStorageAndRunOCR error:", err);
+      alert("File upload / OCR initiation failed.");
     }
   };
 
   const handleUploadInvoices = () => {
-    // trigger hidden file input
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
+  // ---------- Bulk approve (optimized) ----------
   const handleApprovePayments = async () => {
-    const pendingInvoices = invoices.filter(i => i.status === "Pending");
-    if (pendingInvoices.length === 0) {
+    const pending = invoices.filter(i => i.status === "Pending");
+    if (pending.length === 0) {
       alert("No pending invoices to approve.");
       return;
     }
-    // Approve each (optimistic + persisted)
-    for (const inv of pendingInvoices) {
-      // eslint-disable-next-line no-await-in-loop
-      await handleApprove(inv.id);
+
+    // optimistic: mark all pending as Cleared locally
+    const pendingIds = new Set(pending.map(p => p.id));
+    setInvoices(prev => prev.map(i => pendingIds.has(i.id) ? { ...i, status: "Cleared" } : i));
+    trackAction(`Bulk approved ${pending.length} invoices`);
+
+    // persist in one batch (best-effort)
+    try {
+      await supabase.from("invoices").update({ status: "Cleared", updated_at: new Date().toISOString() }).in("id", pending.map(p => p.id));
+      // log user_activity for bulk action
+      if (user) {
+        await supabase.from("user_activity").insert([{ user_id: user.id, action: `Bulk approved ${pending.length} invoices` }]);
+      }
+    } catch (err) {
+      console.error("Bulk approve persistence failed:", err);
+      // no rollback to keep UX simple; optionally refetch from server
     }
-    trackAction(`Bulk approved ${pendingInvoices.length} invoices`);
-    alert(`${pendingInvoices.length} invoices approved`);
+
+    alert(`${pending.length} invoices approved`);
   };
 
   const handleGenerateReports = () => {
@@ -253,16 +316,16 @@ export default function Dashboard() {
     trackAction("Generated invoice report (CSV)");
   };
 
-  // ---------------- KPI Metrics ----------------
+  // ---------- KPI (useMemo) ----------
   const kpi = useMemo(() => {
     const pending = invoices.filter(i => i.status === "Pending").length;
     const cleared = invoices.filter(i => i.status === "Cleared").length;
-    const errors  = invoices.filter(i => i.status === "Error").length;
+    const errors = invoices.filter(i => i.status === "Error").length;
     const timeSavedHrs = cleared * 2 + errors * 0.5;
     return { pending, cleared, errors, timeSavedHrs };
   }, [invoices]);
 
-  // ---------------- Filters ----------------
+  // ---------- Filtered view (useMemo) ----------
   const filtered = useMemo(() => {
     const now = new Date();
     const withinDate = (d) => {
@@ -277,13 +340,12 @@ export default function Dashboard() {
       .filter(i =>
         (statusFilter === "all" || i.status === statusFilter) &&
         withinDate(i.date) &&
-        (i.id.toLowerCase().includes(search.toLowerCase()) ||
-         i.carrier.toLowerCase().includes(search.toLowerCase()))
+        (i.id.toLowerCase().includes(search.toLowerCase()) || i.carrier.toLowerCase().includes(search.toLowerCase()))
       )
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [invoices, statusFilter, dateFilter, search]);
 
-  // ---------------- CSV Export ----------------
+  // ---------- CSV Export ----------
   const exportCSV = () => {
     const headers = ["Invoice #", "Carrier/Client", "Amount", "Status", "Date"];
     const rows = filtered.map(i => [i.id, i.carrier, i.amount, i.status, i.date]);
@@ -295,18 +357,30 @@ export default function Dashboard() {
     a.download = "tallyhauls-invoices.csv";
     a.click();
     URL.revokeObjectURL(url);
-    // small feedback
     trackAction("Exported CSV of filtered invoices");
     alert("CSV Exported!");
   };
 
+  // ---------- Loading UI (must appear AFTER hooks to preserve order) ----------
+  if (loading) {
+    return (
+      <div className="dashboard-container">
+        <header className="dashboard-header">
+          <div className="brand"><img src="/image/1.png" alt="TallyHauls Logo" /></div>
+        </header>
+        <div style={{ padding: 32, textAlign: "center" }}>
+          <p>Loading dashboard…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Render ----------
   return (
     <div className="dashboard-container">
       {/* Top Bar */}
       <header className="dashboard-header">
-        <div className="brand">
-          <img src="/image/1.png" alt="TallyHauls Logo" />
-        </div>
+        <div className="brand"><img src="/image/1.png" alt="TallyHauls Logo" /></div>
         <nav className="dash-nav">
           <a href="/">Home</a>
           <a href="#reports">Reports</a>
@@ -316,11 +390,7 @@ export default function Dashboard() {
       </header>
 
       {/* Secure login banner */}
-      {showSecureMsg && (
-        <div className="secure-banner">
-          ✅ You are logged in securely
-        </div>
-      )}
+      {showSecureMsg && (<div className="secure-banner">✅ You are logged in securely</div>)}
 
       <h2 className="welcome-msg">Welcome, {user?.email} 👋</h2>
 
@@ -376,7 +446,7 @@ export default function Dashboard() {
                     </li>
                   );
                 })
-            : <li>No discrepancies.</li>}
+              : <li>No discrepancies.</li>}
           </ul>
         </div>
       </section>
@@ -446,11 +516,11 @@ export default function Dashboard() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,text/csv,application/pdf,image/*"
           style={{ display: "none" }}
           onChange={(e) => {
             const file = e.target.files?.[0];
-            handleFileUpload(file);
+            if (file) handleFileUpload(file);
             e.target.value = null;
           }}
         />
