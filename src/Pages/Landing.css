@@ -5,14 +5,12 @@
   box-sizing: border-box;
 }
 
-
 body {
   font-family: "Inter", Arial, sans-serif;
   background: #ffffff;
   color: #2d3959;
   line-height: 1.6;
 }
-
 
 /* ===== Navbar ===== */
 .landing-header {
@@ -27,11 +25,9 @@ body {
   z-index: 100;
 }
 
-
 .landing-logo {
   height: 48px;
 }
-
 
 .landing-nav a {
   margin-left: 28px;
@@ -42,27 +38,24 @@ body {
   transition: color 0.2s ease;
 }
 
-
 .landing-nav a:hover {
-  color: #33c898;
+  color: #22c55e; /* brand green on hover */
 }
 
-
+/* ✅ Updated CTA Button */
 .cta-btn {
-  background-color: #33c898;
-  color: #fff;
+  background-color: #22c55e; /* brand green */
+  color: #fff;              /* white text */
   padding: 10px 20px;
   border-radius: 8px;
   font-weight: 600;
   transition: background 0.2s ease;
 }
 
-
 .cta-btn:hover {
-  background-color: #2d3959;
+  background-color: #16a34a; /* darker green hover */
   color: #fff;
 }
-
 
 /* ===== Hero Section ===== */
 .hero-section {
@@ -73,12 +66,10 @@ body {
   gap: 60px;
 }
 
-
 .hero-left {
   flex: 1;
   max-width: 520px;
 }
-
 
 .hero-left h1 {
   font-size: 2.8rem;
@@ -88,13 +79,11 @@ body {
   line-height: 1.2;
 }
 
-
 .hero-left p {
   font-size: 1.2rem;
   margin-bottom: 30px;
   color: #2d3959;
 }
-
 
 .hero-login-form {
   display: flex;
@@ -102,14 +91,12 @@ body {
   gap: 12px;
 }
 
-
 .hero-login-form input {
   padding: 14px 16px;
   border-radius: 8px;
   border: 1px solid #ccc;
   font-size: 1rem;
 }
-
 
 .hero-login-form button {
   padding: 14px;
@@ -122,18 +109,15 @@ body {
   transition: background 0.2s ease;
 }
 
-
 .hero-login-form button:hover {
   background-color: #2d3959;
 }
-
 
 .login-msg {
   margin-top: 10px;
   color: #2d3959;
   font-weight: 600;
 }
-
 
 .hero-right img {
   max-width: 600px;
@@ -142,14 +126,12 @@ body {
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
-
 /* ===== Features Section ===== */
 .features-section {
   padding: 100px 60px;
   background: #f9f9f9;
   text-align: center;
 }
-
 
 .features-section h2 {
   font-size: 2.2rem;
@@ -158,13 +140,11 @@ body {
   margin-bottom: 50px;
 }
 
-
 .features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 30px;
 }
-
 
 .feature-card {
   background: #fff;
@@ -174,11 +154,9 @@ body {
   transition: transform 0.2s ease;
 }
 
-
 .feature-card:hover {
   transform: translateY(-4px);
 }
-
 
 .feature-card h3 {
   font-size: 1.3rem;
@@ -186,12 +164,10 @@ body {
   margin-bottom: 12px;
 }
 
-
 .feature-card p {
   color: #2d3959;
   font-size: 1rem;
 }
-
 
 /* ===== Contact Section ===== */
 .contact-section {
@@ -200,14 +176,12 @@ body {
   text-align: center;
 }
 
-
 .contact-section h2 {
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 30px;
   color: #2d3959;
 }
-
 
 .contact-form {
   max-width: 600px;
@@ -217,7 +191,6 @@ body {
   gap: 14px;
 }
 
-
 .contact-form input,
 .contact-form textarea {
   padding: 14px 16px;
@@ -225,7 +198,6 @@ body {
   border: 1px solid #ccc;
   font-size: 1rem;
 }
-
 
 .contact-form button {
   padding: 14px;
@@ -238,11 +210,9 @@ body {
   transition: background 0.2s ease;
 }
 
-
 .contact-form button:hover {
   background-color: #2d3959;
 }
-
 
 /* ===== Footer ===== */
 .landing-footer {
@@ -254,7 +224,6 @@ body {
   font-weight: 500;
 }
 
-
 /* ===== Responsive ===== */
 @media (max-width: 900px) {
   .hero-section {
@@ -263,16 +232,13 @@ body {
     padding: 60px 30px;
   }
 
-
   .hero-left {
     max-width: 100%;
   }
 
-
   .hero-right img {
     max-width: 100%;
   }
-
 
   .landing-header {
     flex-direction: column;
@@ -280,10 +246,7 @@ body {
     padding: 16px 20px;
   }
 
-
   .landing-nav a {
     margin-left: 16px;
   }
 }
-
-

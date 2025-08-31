@@ -33,7 +33,9 @@ export default function Auth() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: process.env.REACT_APP_DASHBOARD_URL || "http://localhost:3000/dashboard",
+        emailRedirectTo:
+          process.env.REACT_APP_DASHBOARD_URL ||
+          "http://localhost:3000/dashboard",
         shouldCreateUser: true,
       },
     });
@@ -46,8 +48,11 @@ export default function Auth() {
 
   return (
     <div className="auth-container">
+      {/* ✅ Logo at top */}
       <img src="/image/1.png" alt="TallyHauls Logo" className="auth-logo" />
+
       <h1>Login to TallyHauls</h1>
+
       <form onSubmit={handleMagicLink} className="auth-form">
         <input
           type="email"
@@ -60,6 +65,7 @@ export default function Auth() {
           {loading ? "Sending..." : "Send Magic Link"}
         </button>
       </form>
+
       {msg && <p className="auth-msg">{msg}</p>}
     </div>
   );

@@ -7,6 +7,13 @@
   padding: 2rem;
   background: #f5f5f5;
   color: #2d3959;
+  min-height: 100vh;
+  justify-content: center;
+}
+
+.auth-logo {
+  height: 60px;
+  margin-bottom: 1.5rem;
 }
 
 .auth-container h1 {
@@ -15,27 +22,34 @@
 }
 
 .auth-container input {
-  padding: 8px;
+  padding: 10px 12px;
   margin: 8px 0;
-  width: 250px;
-  border-radius: 4px;
+  width: 260px;
+  border-radius: 6px;
   border: 1px solid #ccc;
+  font-size: 1rem;
 }
 
 .auth-container button {
-  padding: 8px 16px;
-  background-color: #33c898;
-  color: white;
+  padding: 10px 20px;
+  background-color: #33c898; /* ✅ Brand green */
+  color: #fff;              /* ✅ White text */
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s ease;
+  width: 100%;
+  max-width: 260px;
 }
 
 .auth-container button:hover {
-  background-color: #2abf84;
+  background-color: #2d3959; /* ✅ Dark hover, matches landing */
+  color: #fff;
 }
 
 .auth-msg {
-  margin-top: 8px;
+  margin-top: 10px;
   color: #2d3959;
+  font-weight: 500;
 }
