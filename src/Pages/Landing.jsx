@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import "./Landing.css";
 import { supabase } from "../supabaseClient";
 
+
 export default function Landing() {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
+
 
   // ✅ On load: check if user already has a session
   useEffect(() => {
@@ -14,12 +16,15 @@ export default function Landing() {
         data: { session },
       } = await supabase.auth.getSession();
 
+
       if (session) {
         window.location.href = "/dashboard"; // already logged in
       }
     };
 
+
     checkSession();
+
 
     // ✅ Also listen to auth changes
     const { data: listener } = supabase.auth.onAuthStateChange(
@@ -30,8 +35,10 @@ export default function Landing() {
       }
     );
 
+
     return () => listener.subscription.unsubscribe();
   }, []);
+
 
   const handleMagicLink = async (e) => {
     e.preventDefault();
@@ -40,8 +47,10 @@ export default function Landing() {
       return;
     }
 
+
     setLoading(true);
     setMsg("");
+
 
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -51,6 +60,7 @@ export default function Landing() {
           emailRedirectTo: "https://tallyhauls.com/",
         },
       });
+
 
       if (error) {
         console.error("Supabase magic link error:", error.message);
@@ -65,6 +75,7 @@ export default function Landing() {
       setLoading(false);
     }
   };
+
 
   // unchanged content...
   const content = {
@@ -93,6 +104,7 @@ export default function Landing() {
     ],
   };
 
+
   return (
     <div className="landing-container">
       {/* Header */}
@@ -104,6 +116,7 @@ export default function Landing() {
           <a href="/auth" className="cta-btn">Get Started</a>
         </nav>
       </header>
+
 
       {/* Hero */}
       <section className="hero-section">
@@ -129,6 +142,7 @@ export default function Landing() {
         </div>
       </section>
 
+
       {/* Features */}
       <section className="features-section" id="features">
         <h2>Features</h2>
@@ -142,6 +156,7 @@ export default function Landing() {
         </div>
       </section>
 
+
       {/* Contact */}
       <section className="contact-section" id="contact">
         <h2>Contact Us</h2>
@@ -152,6 +167,7 @@ export default function Landing() {
           <button type="submit">Get Started</button>
         </form>
       </section>
+
 
       {/* Footer */}
       <footer className="landing-footer">
