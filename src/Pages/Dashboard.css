@@ -1,8 +1,8 @@
 /* ---------- Brand tokens ---------- */
 :root {
   --brand-text: #2d3959;
-  --brand-accent: #33c898;
-  --brand-green: #22c55e; /* ✅ Added proper green */
+  --brand-accent: #33c898; /* main accent green */
+  --brand-green: #22c55e; /* reserved for charts/dots */
   --bg: #f5f7fb;
   --card: #ffffff;
   --muted: #6b7280;
@@ -56,20 +56,21 @@
   color: var(--brand-accent);
 }
 
+/* ---------- Logout Button (same as qa-btn) ---------- */
 .logout-btn {
-  padding: 8px 16px;
+  background: var(--brand-accent);
+  color: white;
   border: none;
-  border-radius: 12px;
-  background-color: var(--brand-green); /* ✅ Now true green */
-  color: #fff;
-  font-weight: 500; /* same as nav */
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.2s ease, transform 0.1s ease;
 }
 
 .logout-btn:hover {
-  background-color: #16a34a; /* darker green hover */
+  background: #2fb487;
   transform: translateY(-1px);
 }
 
