@@ -32,60 +32,34 @@
   z-index: 100;
 }
 
-.dash-nav {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.dash-nav a {
-  color: var(--brand-text);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.dash-nav a:hover {
-  color: var(--brand-accent);
-}
-
-/* ---------- User Dropdown ---------- */
-.user-menu {
-  position: relative;
-}
-
-.user-menu button {
-  font-weight: 500;
-}
-
-.dropdown {
-  position: absolute;
-  top: 36px;
-  right: 0;
-  background: var(--card);
-  box-shadow: var(--shadow);
-  border-radius: var(--radius);
-  overflow: hidden;
-  min-width: 150px;
-}
-
-.dropdown-item {
-  width: 100%;
-  padding: 10px 14px;
-  border: none;
-  text-align: left;
-  background: transparent;
-  color: var(--brand-text);
-  cursor: pointer;
-}
-
-.dropdown-item:hover {
-  background: var(--bg);
-}
-
-/* ---------- Logo ---------- */
 .logo {
   width: 150px;
   height: auto;
+}
+
+/* ---------- Top-right user section ---------- */
+.dashboard-user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-weight: 500;
+  color: var(--brand-text);
+}
+
+.logout-btn {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 12px;
+  background-color: var(--brand-accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.logout-btn:hover {
+  background-color: #2d3959;
+  transform: translateY(-1px);
 }
 
 /* ---------- Secure Banner ---------- */
@@ -95,13 +69,6 @@
   padding: 8px 16px;
   text-align: center;
   font-weight: 500;
-}
-
-/* ---------- Welcome ---------- */
-.welcome-msg {
-  padding: 20px 24px;
-  font-size: 1.25rem;
-  font-weight: 600;
 }
 
 /* ---------- KPI Bar ---------- */

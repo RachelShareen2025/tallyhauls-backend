@@ -1,9 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./Dashboard.css";
+import { supabase } from "../supabaseClient";
 
 export default function Dashboard() {
   const [showBanner, setShowBanner] = useState(true);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        setUser(session.user);
+      } else {
+        window.location.href = "/"; // redirect if not logged in
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/"; // redirect to landing page
+  };
 
   return (
     <div className="dashboard-container">
@@ -12,29 +33,15 @@ export default function Dashboard() {
         <div className="brand">
           <img src="/logo.png" alt="TallyHauls Logo" className="logo" />
         </div>
-        <nav className="dash-nav">
-          <a href="#">Dashboard</a>
-          <a href="#">Reports</a>
-          <a href="#">Settings</a>
-          <div className="user-menu">
-            <button
-              className="btn-text"
-              onClick={() => setShowDropdown(!showDropdown)}
-            >
-              Client ▼
-            </button>
-            {showDropdown && (
-              <div className="dropdown">
-                <button className="dropdown-item">Profile</button>
-                <button className="dropdown-item">Logout</button>
-              </div>
-            )}
-          </div>
-        </nav>
+        <div className="dashboard-user">
+          {user && <span>Welcome, {user.email}</span>}
+          <button className="logout-btn" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </header>
 
       {showBanner && <div className="secure-banner">🔒 You are securely logged in.</div>}
-      <div className="welcome-msg">Welcome back, Client 👋</div>
 
       {/* KPI Bar */}
       <div className="kpi-bar">
@@ -72,7 +79,7 @@ export default function Dashboard() {
           </ul>
         </div>
 
-        {/* Right: Errors */}
+        {/* Right: Discrepancies */}
         <div className="card">
           <div className="card-head"><h3>Discrepancies</h3></div>
           <ul className="error-list">
