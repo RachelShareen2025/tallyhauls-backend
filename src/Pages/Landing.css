@@ -39,12 +39,12 @@ body {
 }
 
 .landing-nav a:hover {
-  color: #22c55e; /* brand green on hover */
+  color: #33c898; /* brand green on hover */
 }
 
 /* ✅ Updated CTA Button */
 .cta-btn {
-  background-color: #22c55e; /* brand green */
+  background-color: #33c898; /* brand green */
   color: #fff;              /* white text */
   padding: 10px 20px;
   border-radius: 8px;

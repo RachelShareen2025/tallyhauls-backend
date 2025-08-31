@@ -49,7 +49,7 @@ export default function Auth() {
   return (
     <div className="auth-container">
       {/* ✅ Logo at top */}
-      <img src="/image/1.png" alt="TallyHauls Logo" className="auth-logo" />
+      <img src="/logo.png" alt="TallyHauls Logo" className="auth-logo" />
 
       <h1>Login to TallyHauls</h1>
 
