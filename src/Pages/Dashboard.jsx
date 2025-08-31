@@ -4,7 +4,6 @@ import { supabase } from "../supabaseClient";
 
 export default function Dashboard() {
   const [showBanner, setShowBanner] = useState(true);
-  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -12,9 +11,7 @@ export default function Dashboard() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (session?.user) {
-        setUser(session.user);
-      } else {
+      if (!session?.user) {
         window.location.href = "/"; // redirect if not logged in
       }
     };
@@ -33,36 +30,48 @@ export default function Dashboard() {
         <div className="brand">
           <img src="/logo.png" alt="TallyHauls Logo" className="logo" />
         </div>
-        <div className="dashboard-user">
-          {user && <span>Welcome, {user.email}</span>}
+        <nav className="dashboard-nav">
+          <a href="/reports">Reports</a>
           <button className="logout-btn" onClick={handleLogout}>
             Logout
           </button>
-        </div>
+        </nav>
       </header>
 
-      {showBanner && <div className="secure-banner">🔒 You are securely logged in.</div>}
+      {showBanner && (
+        <div className="secure-banner">🔒 You are securely logged in.</div>
+      )}
 
       {/* KPI Bar */}
       <div className="kpi-bar">
         <div className="kpi-card">
-          <div className="kpi-top"><span className="dot dot-green"></span> Successful</div>
-          <div className="kpi-value">1,245</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-top"><span className="dot dot-amber"></span> Pending</div>
+          <div className="kpi-top">
+            <span className="dot dot-amber"></span> Pending Invoices
+          </div>
           <div className="kpi-value">342</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-top"><span className="dot dot-red"></span> Errors</div>
+          <div className="kpi-top">
+            <span className="dot dot-green"></span> Cleared Invoices
+          </div>
+          <div className="kpi-value">1,245</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-top">
+            <span className="dot dot-red"></span> Errors Detected & Fixed
+          </div>
           <div className="kpi-value">18</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-top"><span className="dot dot-blue"></span> Total Files Uploaded</div>
+          <div className="kpi-top">
+            <span className="dot dot-blue"></span> Total Files Uploaded
+          </div>
           <div className="kpi-value">1,605</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-top"><span className="dot dot-purple"></span> Time Saved</div>
+          <div className="kpi-top">
+            <span className="dot dot-purple"></span> Time Saved This Week
+          </div>
           <div className="kpi-value">72 hrs</div>
         </div>
       </div>
@@ -156,9 +165,12 @@ export default function Dashboard() {
       <div className="quick-actions horizontal">
         <button className="qa-btn">⬆ Upload Invoices</button>
         <button className="qa-btn">⬆ Upload Rate Sheets</button>
+        <button className="qa-btn">📊 Generate Reports</button>
       </div>
 
-      <footer className="dash-footer">© 2025 TallyHauls – All Rights Reserved</footer>
+      <footer className="dash-footer">
+        © 2025 TallyHauls – All Rights Reserved
+      </footer>
     </div>
   );
 }

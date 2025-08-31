@@ -37,13 +37,22 @@
   height: auto;
 }
 
-/* ---------- Top-right user section ---------- */
-.dashboard-user {
+/* ---------- Header Nav (Reports + Logout) ---------- */
+.dashboard-nav {
   display: flex;
   align-items: center;
   gap: 16px;
-  font-weight: 500;
+}
+
+.dashboard-nav a {
+  text-decoration: none;
   color: var(--brand-text);
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.dashboard-nav a:hover {
+  color: var(--brand-accent);
 }
 
 .logout-btn {
@@ -260,19 +269,23 @@
 /* ---------- Quick Actions ---------- */
 .quick-actions {
   display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  padding: 16px 24px;
+  gap: 16px;
+  justify-content: center; /* centered */
+  padding: 24px;
 }
 
 .qa-btn {
   background: var(--brand-accent);
   color: white;
   border: none;
-  padding: 10px 16px;
+  padding: 12px 20px;
   border-radius: var(--radius);
   font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   transition: 0.2s;
 }
 
