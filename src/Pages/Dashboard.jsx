@@ -39,7 +39,7 @@ export default function Dashboard() {
       </header>
 
       {showBanner && (
-        <div className="secure-banner">🔒 You are securely logged in.</div>
+        <div className="secure-banner">You are securely logged in.</div>
       )}
 
       {/* KPI Bar */}
@@ -187,9 +187,9 @@ export default function Dashboard() {
 
       {/* Quick Actions */}
       <div className="quick-actions horizontal">
-        <button className="qa-btn">⬆ Upload Invoices</button>
-        <button className="qa-btn">⬆ Upload Rate Sheets</button>
-        <button className="qa-btn">📊 Generate Reports</button>
+        <button className="qa-btn">Upload Invoices</button>
+        <button className="qa-btn">Upload Rate Sheets</button>
+        <button className="qa-btn">Generate Reports</button>
       </div>
 
       <footer className="dash-footer">
