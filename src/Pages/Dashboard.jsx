@@ -10,7 +10,7 @@ export default function Dashboard() {
       {/* ---------- Header ---------- */}
       <header className="dashboard-header">
         <div className="brand">
-          <img src="/logo.png" alt="Logo" />
+          <img src="/image/logo.png" alt="TallyHauls Logo" className="dashboard-logo" />
         </div>
 
         <nav className="dash-nav">
@@ -24,7 +24,7 @@ export default function Dashboard() {
               className="btn-text"
               onClick={() => setShowDropdown(!showDropdown)}
             >
-              Rae ▼
+              Client ▼
             </button>
             {showDropdown && (
               <div className="dropdown">
@@ -38,13 +38,11 @@ export default function Dashboard() {
 
       {/* ---------- Secure login banner ---------- */}
       {showBanner && (
-        <div className="secure-banner">
-          🔒 You are securely logged in.
-        </div>
+        <div className="secure-banner">🔒 You are securely logged in.</div>
       )}
 
       {/* ---------- Welcome ---------- */}
-      <div className="welcome-msg">Welcome back, Rae 👋</div>
+      <div className="welcome-msg">Welcome back, Client 👋</div>
 
       {/* ---------- KPI Bar ---------- */}
       <div className="kpi-bar">
@@ -71,9 +69,16 @@ export default function Dashboard() {
 
         <div className="kpi-card">
           <div className="kpi-top">
-            <span className="dot dot-blue"></span> Total Uploads
+            <span className="dot dot-blue"></span> Total Files Uploaded
           </div>
           <div className="kpi-value">1,605</div>
+        </div>
+
+        <div className="kpi-card">
+          <div className="kpi-top">
+            <span className="dot dot-purple"></span> Time Saved
+          </div>
+          <div className="kpi-value">72 hrs</div>
         </div>
       </div>
 
@@ -159,30 +164,36 @@ export default function Dashboard() {
                 <td>#1024</td>
                 <td>Invoice Jan.pdf</td>
                 <td>2025-08-30</td>
-                <td><span className="status ok">OK</span></td>
+                <td>
+                  <span className="status ok">OK</span>
+                </td>
                 <td className="right">$1,200</td>
               </tr>
               <tr>
                 <td>#1023</td>
                 <td>Invoice Feb.pdf</td>
                 <td>2025-08-29</td>
-                <td><span className="status err">Error</span></td>
+                <td>
+                  <span className="status err">Error</span>
+                </td>
                 <td className="right">$980</td>
               </tr>
               <tr>
                 <td>#1022</td>
                 <td>Rate Sheet Mar.xlsx</td>
                 <td>2025-08-28</td>
-                <td><span className="status pending">Pending</span></td>
-                <td className="right">$–</td>
+                <td>
+                  <span className="status pending">Pending</span>
+                </td>
+                <td className="right">–</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* ---------- Quick Actions (Floating Buttons) ---------- */}
-      <div className="quick-actions">
+      {/* ---------- Quick Actions (Horizontal Buttons) ---------- */}
+      <div className="quick-actions horizontal">
         <button className="qa-btn">⬆ Upload Invoices</button>
         <button className="qa-btn">⬆ Upload Rate Sheets</button>
       </div>
