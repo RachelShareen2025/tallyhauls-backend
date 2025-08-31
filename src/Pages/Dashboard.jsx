@@ -80,27 +80,45 @@ export default function Dashboard() {
       <div className="two-col">
         {/* Left: Recent Activity */}
         <div className="card">
-          <div className="card-head"><h3>Recent Activity</h3></div>
+          <div className="card-head">
+            <h3>Recent Activity</h3>
+          </div>
           <ul className="activity-list">
-            <li><span className="time">10:24 AM</span><span className="text">Invoice #1024 uploaded</span></li>
-            <li><span className="time">9:10 AM</span><span className="text">Rate sheet updated</span></li>
-            <li><span className="time">Yesterday</span><span className="text">Invoice #1023 failed to upload</span></li>
+            <li>
+              <span className="time">10:24 AM</span>
+              <span className="text">Invoice #1024 uploaded</span>
+            </li>
+            <li>
+              <span className="time">9:10 AM</span>
+              <span className="text">Rate sheet updated</span>
+            </li>
+            <li>
+              <span className="time">Yesterday</span>
+              <span className="text">Invoice #1023 failed to upload</span>
+            </li>
           </ul>
         </div>
 
         {/* Right: Discrepancies */}
         <div className="card">
-          <div className="card-head"><h3>Discrepancies</h3></div>
+          <div className="card-head">
+            <h3>Discrepancies</h3>
+          </div>
           <ul className="error-list">
             <li>
-              <div className="err-main"><span className="badge high">High</span>Invoice #1023 error</div>
+              <div className="err-main">
+                <span className="badge high">High</span>
+                Invoice #1023 error
+              </div>
               <div className="err-actions">
                 <button className="btn-outline small">Retry</button>
-                <button className="btn-text small">Details</button>
               </div>
             </li>
             <li>
-              <div className="err-main"><span className="badge medium">Medium</span>Rate mismatch found</div>
+              <div className="err-main">
+                <span className="badge medium">Medium</span>
+                Rate mismatch found
+              </div>
               <div className="err-actions">
                 <button className="btn-outline small">Fix</button>
               </div>
@@ -139,21 +157,27 @@ export default function Dashboard() {
                 <td>#1024</td>
                 <td>Invoice Jan.pdf</td>
                 <td>2025-08-30</td>
-                <td><span className="status ok">OK</span></td>
+                <td>
+                  <span className="status ok">OK</span>
+                </td>
                 <td className="right">$1,200</td>
               </tr>
               <tr>
                 <td>#1023</td>
                 <td>Invoice Feb.pdf</td>
                 <td>2025-08-29</td>
-                <td><span className="status err">Error</span></td>
+                <td>
+                  <span className="status err">Error</span>
+                </td>
                 <td className="right">$980</td>
               </tr>
               <tr>
                 <td>#1022</td>
                 <td>Rate Sheet Mar.xlsx</td>
                 <td>2025-08-28</td>
-                <td><span className="status pending">Pending</span></td>
+                <td>
+                  <span className="status pending">Pending</span>
+                </td>
                 <td className="right">–</td>
               </tr>
             </tbody>
