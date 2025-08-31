@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from "react";
 import "./Dashboard.css";
 import { supabase } from "../supabaseClient";
+import { uploadInvoices } from "../features/uploadInvoices";
+import { uploadRateSheets } from "../features/uploadRateSheets";
+import { generateReports } from "../features/generateReports";
+import { reconcileInvoice } from "../features/reconcileInvoice";
 
 export default function Dashboard() {
   const [showBanner, setShowBanner] = useState(true);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -111,7 +116,14 @@ export default function Dashboard() {
                 Invoice #1023 error
               </div>
               <div className="err-actions">
-                <button className="btn-outline small">Retry</button>
+                <button
+                  className="btn-outline small"
+                  onClick={() =>
+                    reconcileInvoice("1023-uuid-placeholder", "rateSheet-uuid-placeholder")
+                  }
+                >
+                  Retry
+                </button>
               </div>
             </li>
             <li>
@@ -120,7 +132,14 @@ export default function Dashboard() {
                 Rate mismatch found
               </div>
               <div className="err-actions">
-                <button className="btn-outline small">Fix</button>
+                <button
+                  className="btn-outline small"
+                  onClick={() =>
+                    reconcileInvoice("invoice-uuid-placeholder", "rateSheet-uuid-placeholder")
+                  }
+                >
+                  Fix
+                </button>
               </div>
             </li>
           </ul>
@@ -187,9 +206,26 @@ export default function Dashboard() {
 
       {/* Quick Actions */}
       <div className="quick-actions horizontal">
-        <button className="qa-btn">Upload Invoices</button>
-        <button className="qa-btn">Upload Rate Sheets</button>
-        <button className="qa-btn">Generate Reports</button>
+        <input
+          type="file"
+          onChange={(e) => setSelectedFile(e.target.files[0])}
+          style={{ marginBottom: "12px" }}
+        />
+        <button
+          className="qa-btn"
+          onClick={() => uploadInvoices(selectedFile)}
+        >
+          Upload Invoices
+        </button>
+        <button
+          className="qa-btn"
+          onClick={() => uploadRateSheets(selectedFile)}
+        >
+          Upload Rate Sheets
+        </button>
+        <button className="qa-btn" onClick={generateReports}>
+          Generate Reports
+        </button>
       </div>
 
       <footer className="dash-footer">
