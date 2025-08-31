@@ -2,12 +2,10 @@ import React, { useState, useEffect } from "react";
 import "./Landing.css";
 import { supabase } from "../supabaseClient";
 
-
 export default function Landing() {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
-
 
   // ✅ On load: check if user already has a session
   useEffect(() => {
@@ -16,15 +14,12 @@ export default function Landing() {
         data: { session },
       } = await supabase.auth.getSession();
 
-
       if (session) {
         window.location.href = "/dashboard"; // already logged in
       }
     };
 
-
     checkSession();
-
 
     // ✅ Also listen to auth changes
     const { data: listener } = supabase.auth.onAuthStateChange(
@@ -35,10 +30,8 @@ export default function Landing() {
       }
     );
 
-
     return () => listener.subscription.unsubscribe();
   }, []);
-
 
   const handleMagicLink = async (e) => {
     e.preventDefault();
@@ -47,20 +40,16 @@ export default function Landing() {
       return;
     }
 
-
     setLoading(true);
     setMsg("");
-
 
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // ✅ Redirect to root so Supabase can persist session
           emailRedirectTo: "https://tallyhauls.com/",
         },
       });
-
 
       if (error) {
         console.error("Supabase magic link error:", error.message);
@@ -76,8 +65,6 @@ export default function Landing() {
     }
   };
 
-
-  // unchanged content...
   const content = {
     hero: {
       heading: "Save 10+ Hours a Week on Freight Reconciliation",
@@ -104,19 +91,23 @@ export default function Landing() {
     ],
   };
 
-
   return (
     <div className="landing-container">
       {/* Header */}
       <header className="landing-header">
-        <img src="/image/1.png" alt="TallyHauls Logo" className="landing-logo" />
+        <img
+          src="/logo.png"
+          alt="TallyHauls Logo"
+          className="landing-logo"
+        />
         <nav className="landing-nav">
           <a href="#features">Features</a>
           <a href="#contact">Contact</a>
-          <a href="/auth" className="cta-btn">Get Started</a>
+          <a href="/auth" className="cta-btn">
+            Get Started
+          </a>
         </nav>
       </header>
-
 
       {/* Hero */}
       <section className="hero-section">
@@ -138,10 +129,12 @@ export default function Landing() {
           {msg && <p className="login-msg">{msg}</p>}
         </div>
         <div className="hero-right">
-          <img src="/image/Dashboard.png" alt="Dashboard preview" />
+          <img
+            src="/image/Dashboard.png"
+            alt="Dashboard preview"
+          />
         </div>
       </section>
-
 
       {/* Features */}
       <section className="features-section" id="features">
@@ -156,18 +149,20 @@ export default function Landing() {
         </div>
       </section>
 
-
       {/* Contact */}
       <section className="contact-section" id="contact">
         <h2>Contact Us</h2>
         <form className="contact-form" action="/auth">
           <input type="text" placeholder="Full Name" required />
           <input type="email" placeholder="Email Address" required />
-          <textarea placeholder="How can we help you?" rows="4" required></textarea>
+          <textarea
+            placeholder="How can we help you?"
+            rows="4"
+            required
+          ></textarea>
           <button type="submit">Get Started</button>
         </form>
       </section>
-
 
       {/* Footer */}
       <footer className="landing-footer">
