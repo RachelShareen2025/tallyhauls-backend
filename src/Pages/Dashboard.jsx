@@ -1,11 +1,11 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import "./Dashboard.css";
 import { supabase } from "../supabaseClient";
-import { uploadInvoiceFile } from "../features/uploadInvoiceFile";
-import { uploadRateSheets } from "../features/uploadRateSheets";
-import { generateReports } from "../features/generateReports";
-import { retryUpload, markFixed } from "../features/reconcileInvoice";
+import { uploadInvoiceFile } from "./features/uploadInvoiceFile";
+import { uploadRateSheets } from "./features/uploadRateSheets";
+import { generateReports } from "./features/generateReports";
+import { reconcileInvoice, retryUpload, markFixed } from "./features/reconcileInvoice";
 
 export default function Dashboard() {
   const [showBanner, setShowBanner] = useState(true);
@@ -13,11 +13,7 @@ export default function Dashboard() {
   const [recolinations, setRecolinations] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Refs for hidden file inputs
-  const invoiceInputRef = useRef(null);
-  const rateSheetInputRef = useRef(null);
-
-  // Fetch uploads and recolinations
+  // Fetch uploads & recolinations
   const fetchUploads = async () => {
     setLoading(true);
     try {
@@ -57,7 +53,7 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/"; // redirect
+    window.location.href = "/";
   };
 
   // File upload handlers
@@ -168,7 +164,6 @@ export default function Dashboard() {
                 <div className="err-actions">
                   <button
                     className="btn-outline small"
-                    type="button"
                     onClick={async () => {
                       await retryUpload(row.id || row.recolination_id);
                       await fetchUploads();
@@ -178,7 +173,6 @@ export default function Dashboard() {
                   </button>
                   <button
                     className="btn-outline small"
-                    type="button"
                     onClick={async () => {
                       await markFixed(row.id || row.recolination_id);
                       await fetchUploads();
@@ -249,32 +243,30 @@ export default function Dashboard() {
       <div className="quick-actions horizontal">
         <input
           type="file"
-          ref={invoiceInputRef}
+          id="invoice-upload"
           style={{ display: "none" }}
           onChange={handleInvoiceUpload}
         />
         <input
           type="file"
-          ref={rateSheetInputRef}
+          id="ratesheet-upload"
           style={{ display: "none" }}
           onChange={handleRateSheetUpload}
         />
 
         <button
-          type="button"
           className="qa-btn"
-          onClick={() => invoiceInputRef.current.click()}
+          onClick={() => document.getElementById("invoice-upload").click()}
         >
           Upload Invoices
         </button>
         <button
-          type="button"
           className="qa-btn"
-          onClick={() => rateSheetInputRef.current.click()}
+          onClick={() => document.getElementById("ratesheet-upload").click()}
         >
           Upload Rate Sheets
         </button>
-        <button type="button" className="qa-btn" onClick={generateReports}>
+        <button className="qa-btn" onClick={generateReports}>
           Generate Reports
         </button>
       </div>
