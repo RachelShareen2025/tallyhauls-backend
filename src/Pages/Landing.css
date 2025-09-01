@@ -49,7 +49,7 @@ body {
   padding: 10px 20px;
   border-radius: 8px;
   font-weight: 600;
-  transition: color 0.2s ease;
+  transition:  background 0.2s ease;
 }
 
 .cta-btn:hover {
@@ -249,4 +249,23 @@ body {
   .landing-nav a {
     margin-left: 16px;
   }
+}
+/* Force CTA button colors */
+.landing-header .cta-btn {
+  background-color: #33c898 !important; /* brand green */
+  color: #fff !important;               /* white text */
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;                /* removes underline */
+  transition: background 0.2s ease;
+}
+
+/* Hover / Focus / Active */
+.landing-header .cta-btn:hover,
+.landing-header .cta-btn:focus,
+.landing-header .cta-btn:active {
+  background-color: #16a34a !important; /* darker green hover */
+  color: #fff !important;
+  outline: none;
 }
