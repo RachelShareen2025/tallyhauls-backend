@@ -1,5 +1,5 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import "./Dashboard.css";
 import { supabase } from "../supabaseClient";
 import { uploadInvoiceFile } from "../features/uploadInvoiceFile";
@@ -12,12 +12,9 @@ export default function Dashboard() {
   const [uploads, setUploads] = useState([]);
   const [recolinations, setRecolinations] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  // Refs for hidden file inputs
-  const invoiceInputRef = useRef(null);
-  const ratesheetInputRef = useRef(null);
-
-  // Fetch uploads
+  // Fetch uploads and recolinations
   const fetchUploads = async () => {
     setLoading(true);
     try {
@@ -42,10 +39,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchUserAndData = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
         window.location.href = "/";
       } else {
@@ -60,33 +54,37 @@ export default function Dashboard() {
     window.location.href = "/";
   };
 
-  // File upload handlers
+  // Invoice upload
   const handleInvoiceUpload = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      try {
-        await uploadInvoiceFile(file);
-        await fetchUploads();
-      } catch (err) {
-        alert("Invoice upload failed: " + err.message);
-      } finally {
-        // Reset input so same file can be selected again if needed
-        event.target.value = null;
-      }
+    if (!file) return;
+    try {
+      setUploading(true);
+      await uploadInvoiceFile(file);
+      await fetchUploads();
+    } catch (err) {
+      console.error("Invoice upload failed:", err.message);
+      alert("Upload failed: " + err.message);
+    } finally {
+      setUploading(false);
+      event.target.value = null;
     }
   };
 
+  // Ratesheet upload
   const handleRateSheetUpload = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      try {
-        await uploadRateSheets(file);
-        await fetchUploads();
-      } catch (err) {
-        alert("Rate sheet upload failed: " + err.message);
-      } finally {
-        event.target.value = null;
-      }
+    if (!file) return;
+    try {
+      setUploading(true);
+      await uploadRateSheets(file);
+      await fetchUploads();
+    } catch (err) {
+      console.error("Rate sheet upload failed:", err.message);
+      alert("Upload failed: " + err.message);
+    } finally {
+      setUploading(false);
+      event.target.value = null;
     }
   };
 
@@ -149,7 +147,7 @@ export default function Dashboard() {
 
       {/* Two Column Layout */}
       <div className="two-col">
-        {/* Left: Recent Activity */}
+        {/* Recent Activity */}
         <div className="card">
           <div className="card-head">
             <h3>Recent Activity</h3>
@@ -164,7 +162,7 @@ export default function Dashboard() {
           </ul>
         </div>
 
-        {/* Right: Discrepancies */}
+        {/* Discrepancies */}
         <div className="card">
           <div className="card-head">
             <h3>Discrepancies</h3>
@@ -259,28 +257,30 @@ export default function Dashboard() {
       <div className="quick-actions horizontal">
         <input
           type="file"
-          ref={invoiceInputRef}
+          id="invoice-upload"
           style={{ display: "none" }}
           onChange={handleInvoiceUpload}
         />
         <input
           type="file"
-          ref={ratesheetInputRef}
+          id="ratesheet-upload"
           style={{ display: "none" }}
           onChange={handleRateSheetUpload}
         />
 
         <button
           className="qa-btn"
-          onClick={() => invoiceInputRef.current && invoiceInputRef.current.click()}
+          onClick={() => document.getElementById("invoice-upload").click()}
+          disabled={uploading}
         >
-          Upload Invoices
+          {uploading ? "Uploading..." : "Upload Invoices"}
         </button>
         <button
           className="qa-btn"
-          onClick={() => ratesheetInputRef.current && ratesheetInputRef.current.click()}
+          onClick={() => document.getElementById("ratesheet-upload").click()}
+          disabled={uploading}
         >
-          Upload Rate Sheets
+          {uploading ? "Uploading..." : "Upload Rate Sheets"}
         </button>
         <button className="qa-btn" onClick={generateReports}>
           Generate Reports
