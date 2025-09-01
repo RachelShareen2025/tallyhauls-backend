@@ -377,3 +377,25 @@
   color: var(--muted);
   font-size: 0.8rem;
 }
+/* Force logout button styling */
+.dashboard-header .logout-btn {
+  background-color: var(--brand-accent) !important;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* Hover, Focus, Active states */
+.dashboard-header .logout-btn:hover,
+.dashboard-header .logout-btn:focus,
+.dashboard-header .logout-btn:active {
+  background-color: #2fb487 !important;
+  outline: none; /* removes default blue focus ring */
+  transform: translateY(-1px);
+}
