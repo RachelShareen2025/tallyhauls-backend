@@ -1,11 +1,11 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./Dashboard.css";
 import { supabase } from "../supabaseClient";
 import { uploadInvoiceFile } from "../features/uploadInvoiceFile";
 import { uploadRateSheets } from "../features/uploadRateSheets";
 import { generateReports } from "../features/generateReports";
-import { reconcileInvoice, retryUpload, markFixed } from "../features/reconcileInvoice";
+import { retryUpload, markFixed } from "../features/reconcileInvoice";
 
 export default function Dashboard() {
   const [showBanner, setShowBanner] = useState(true);
@@ -13,7 +13,11 @@ export default function Dashboard() {
   const [recolinations, setRecolinations] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch uploads
+  // Refs for hidden file inputs
+  const invoiceInputRef = useRef(null);
+  const rateSheetInputRef = useRef(null);
+
+  // Fetch uploads and recolinations
   const fetchUploads = async () => {
     setLoading(true);
     try {
@@ -164,6 +168,7 @@ export default function Dashboard() {
                 <div className="err-actions">
                   <button
                     className="btn-outline small"
+                    type="button"
                     onClick={async () => {
                       await retryUpload(row.id || row.recolination_id);
                       await fetchUploads();
@@ -173,6 +178,7 @@ export default function Dashboard() {
                   </button>
                   <button
                     className="btn-outline small"
+                    type="button"
                     onClick={async () => {
                       await markFixed(row.id || row.recolination_id);
                       await fetchUploads();
@@ -243,30 +249,32 @@ export default function Dashboard() {
       <div className="quick-actions horizontal">
         <input
           type="file"
-          id="invoice-upload"
+          ref={invoiceInputRef}
           style={{ display: "none" }}
           onChange={handleInvoiceUpload}
         />
         <input
           type="file"
-          id="ratesheet-upload"
+          ref={rateSheetInputRef}
           style={{ display: "none" }}
           onChange={handleRateSheetUpload}
         />
 
         <button
+          type="button"
           className="qa-btn"
-          onClick={() => document.getElementById("invoice-upload").click()}
+          onClick={() => invoiceInputRef.current.click()}
         >
           Upload Invoices
         </button>
         <button
+          type="button"
           className="qa-btn"
-          onClick={() => document.getElementById("ratesheet-upload").click()}
+          onClick={() => rateSheetInputRef.current.click()}
         >
           Upload Rate Sheets
         </button>
-        <button className="qa-btn" onClick={generateReports}>
+        <button type="button" className="qa-btn" onClick={generateReports}>
           Generate Reports
         </button>
       </div>
