@@ -1,11 +1,11 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./Dashboard.css";
 import { supabase } from "../supabaseClient";
-import { uploadInvoiceFile } from "./features/uploadInvoiceFile";
-import { uploadRateSheets } from "./features/uploadRateSheets";
-import { generateReports } from "./features/generateReports";
-import { reconcileInvoice, retryUpload, markFixed } from "./features/reconcileInvoice";
+import { uploadInvoiceFile } from "../features/uploadInvoiceFile";
+import { uploadRateSheets } from "../features/uploadRateSheets";
+import { generateReports } from "../features/generateReports";
+import { reconcileInvoice, retryUpload, markFixed } from "../features/reconcileInvoice";
 
 export default function Dashboard() {
   const [showBanner, setShowBanner] = useState(true);
@@ -13,7 +13,11 @@ export default function Dashboard() {
   const [recolinations, setRecolinations] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch uploads & recolinations
+  // Refs for hidden file inputs
+  const invoiceInputRef = useRef(null);
+  const ratesheetInputRef = useRef(null);
+
+  // Fetch uploads
   const fetchUploads = async () => {
     setLoading(true);
     try {
@@ -43,7 +47,7 @@ export default function Dashboard() {
       } = await supabase.auth.getSession();
 
       if (!session?.user) {
-        window.location.href = "/"; // redirect if not logged in
+        window.location.href = "/";
       } else {
         await fetchUploads();
       }
@@ -60,20 +64,32 @@ export default function Dashboard() {
   const handleInvoiceUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
-      await uploadInvoiceFile(file);
-      await fetchUploads();
+      try {
+        await uploadInvoiceFile(file);
+        await fetchUploads();
+      } catch (err) {
+        alert("Invoice upload failed: " + err.message);
+      } finally {
+        // Reset input so same file can be selected again if needed
+        event.target.value = null;
+      }
     }
   };
 
   const handleRateSheetUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
-      await uploadRateSheets(file);
-      await fetchUploads();
+      try {
+        await uploadRateSheets(file);
+        await fetchUploads();
+      } catch (err) {
+        alert("Rate sheet upload failed: " + err.message);
+      } finally {
+        event.target.value = null;
+      }
     }
   };
 
-  // Map errors for Discrepancies card
   const errorRows = recolinations.filter((r) => r.status === "error");
 
   return (
@@ -243,26 +259,26 @@ export default function Dashboard() {
       <div className="quick-actions horizontal">
         <input
           type="file"
-          id="invoice-upload"
+          ref={invoiceInputRef}
           style={{ display: "none" }}
           onChange={handleInvoiceUpload}
         />
         <input
           type="file"
-          id="ratesheet-upload"
+          ref={ratesheetInputRef}
           style={{ display: "none" }}
           onChange={handleRateSheetUpload}
         />
 
         <button
           className="qa-btn"
-          onClick={() => document.getElementById("invoice-upload").click()}
+          onClick={() => invoiceInputRef.current && invoiceInputRef.current.click()}
         >
           Upload Invoices
         </button>
         <button
           className="qa-btn"
-          onClick={() => document.getElementById("ratesheet-upload").click()}
+          onClick={() => ratesheetInputRef.current && ratesheetInputRef.current.click()}
         >
           Upload Rate Sheets
         </button>
