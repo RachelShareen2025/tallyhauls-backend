@@ -12,7 +12,6 @@ export default function Dashboard() {
   const [uploads, setUploads] = useState([]);
   const [recolinations, setRecolinations] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
   // Fetch uploads and recolinations
   const fetchUploads = async () => {
@@ -39,7 +38,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchUserAndData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session?.user) {
         window.location.href = "/";
       } else {
@@ -54,37 +56,19 @@ export default function Dashboard() {
     window.location.href = "/";
   };
 
-  // Invoice upload
   const handleInvoiceUpload = async (event) => {
     const file = event.target.files[0];
-    if (!file) return;
-    try {
-      setUploading(true);
+    if (file) {
       await uploadInvoiceFile(file);
       await fetchUploads();
-    } catch (err) {
-      console.error("Invoice upload failed:", err.message);
-      alert("Upload failed: " + err.message);
-    } finally {
-      setUploading(false);
-      event.target.value = null;
     }
   };
 
-  // Ratesheet upload
   const handleRateSheetUpload = async (event) => {
     const file = event.target.files[0];
-    if (!file) return;
-    try {
-      setUploading(true);
+    if (file) {
       await uploadRateSheets(file);
       await fetchUploads();
-    } catch (err) {
-      console.error("Rate sheet upload failed:", err.message);
-      alert("Upload failed: " + err.message);
-    } finally {
-      setUploading(false);
-      event.target.value = null;
     }
   };
 
@@ -99,7 +83,7 @@ export default function Dashboard() {
         </div>
         <nav className="dashboard-nav">
           <a href="/reports">Reports</a>
-          <button className="logout-btn" onClick={handleLogout}>
+          <button className="logout-btn" type="button" onClick={handleLogout}>
             Logout
           </button>
         </nav>
@@ -147,7 +131,7 @@ export default function Dashboard() {
 
       {/* Two Column Layout */}
       <div className="two-col">
-        {/* Recent Activity */}
+        {/* Left: Recent Activity */}
         <div className="card">
           <div className="card-head">
             <h3>Recent Activity</h3>
@@ -162,7 +146,7 @@ export default function Dashboard() {
           </ul>
         </div>
 
-        {/* Discrepancies */}
+        {/* Right: Discrepancies */}
         <div className="card">
           <div className="card-head">
             <h3>Discrepancies</h3>
@@ -178,6 +162,7 @@ export default function Dashboard() {
                 <div className="err-actions">
                   <button
                     className="btn-outline small"
+                    type="button"
                     onClick={async () => {
                       await retryUpload(row.id || row.recolination_id);
                       await fetchUploads();
@@ -187,6 +172,7 @@ export default function Dashboard() {
                   </button>
                   <button
                     className="btn-outline small"
+                    type="button"
                     onClick={async () => {
                       await markFixed(row.id || row.recolination_id);
                       await fetchUploads();
@@ -258,31 +244,35 @@ export default function Dashboard() {
         <input
           type="file"
           id="invoice-upload"
-          style={{ display: "none" }}
+          style={{ position: "absolute", left: "-9999px" }}
           onChange={handleInvoiceUpload}
         />
         <input
           type="file"
           id="ratesheet-upload"
-          style={{ display: "none" }}
+          style={{ position: "absolute", left: "-9999px" }}
           onChange={handleRateSheetUpload}
         />
 
         <button
+          type="button"
           className="qa-btn"
           onClick={() => document.getElementById("invoice-upload").click()}
-          disabled={uploading}
         >
-          {uploading ? "Uploading..." : "Upload Invoices"}
+          Upload Invoices
         </button>
         <button
+          type="button"
           className="qa-btn"
           onClick={() => document.getElementById("ratesheet-upload").click()}
-          disabled={uploading}
         >
-          {uploading ? "Uploading..." : "Upload Rate Sheets"}
+          Upload Rate Sheets
         </button>
-        <button className="qa-btn" onClick={generateReports}>
+        <button
+          type="button"
+          className="qa-btn"
+          onClick={generateReports}
+        >
           Generate Reports
         </button>
       </div>
