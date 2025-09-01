@@ -1,5 +1,5 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./Dashboard.css";
 import { supabase } from "../supabaseClient";
 import { uploadInvoiceFile } from "../features/uploadInvoiceFile";
@@ -13,7 +13,11 @@ export default function Dashboard() {
   const [recolinations, setRecolinations] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch uploads and recolinations
+  // React refs for hidden file inputs
+  const invoiceInputRef = useRef(null);
+  const rateSheetInputRef = useRef(null);
+
+  // Fetch uploads & recolinations
   const fetchUploads = async () => {
     setLoading(true);
     try {
@@ -38,12 +42,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchUserAndData = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
-        window.location.href = "/";
+        window.location.href = "/"; // redirect if not logged in
       } else {
         await fetchUploads();
       }
@@ -56,6 +57,7 @@ export default function Dashboard() {
     window.location.href = "/";
   };
 
+  // File upload handlers
   const handleInvoiceUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -72,6 +74,7 @@ export default function Dashboard() {
     }
   };
 
+  // Errors for Discrepancies card
   const errorRows = recolinations.filter((r) => r.status === "error");
 
   return (
@@ -83,9 +86,7 @@ export default function Dashboard() {
         </div>
         <nav className="dashboard-nav">
           <a href="/reports">Reports</a>
-          <button className="logout-btn" type="button" onClick={handleLogout}>
-            Logout
-          </button>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </nav>
       </header>
 
@@ -94,48 +95,36 @@ export default function Dashboard() {
       {/* KPI Bar */}
       <div className="kpi-bar">
         <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="dot dot-amber"></span> Pending Invoices
-          </div>
+          <div className="kpi-top"><span className="dot dot-amber"></span> Pending Invoices</div>
           <div className="kpi-value">
             {uploads.filter((u) => u.status === "pending" && u.type === "invoice").length}
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="dot dot-green"></span> Cleared Invoices
-          </div>
+          <div className="kpi-top"><span className="dot dot-green"></span> Cleared Invoices</div>
           <div className="kpi-value">
             {uploads.filter((u) => u.status === "cleared" && u.type === "invoice").length}
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="dot dot-red"></span> Errors Detected & Fixed
-          </div>
+          <div className="kpi-top"><span className="dot dot-red"></span> Errors Detected & Fixed</div>
           <div className="kpi-value">{errorRows.length}</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="dot dot-blue"></span> Total Files Uploaded
-          </div>
+          <div className="kpi-top"><span className="dot dot-blue"></span> Total Files Uploaded</div>
           <div className="kpi-value">{uploads.length}</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="dot dot-purple"></span> Time Saved This Week
-          </div>
+          <div className="kpi-top"><span className="dot dot-purple"></span> Time Saved This Week</div>
           <div className="kpi-value">72 hrs</div>
         </div>
       </div>
 
       {/* Two Column Layout */}
       <div className="two-col">
-        {/* Left: Recent Activity */}
+        {/* Recent Activity */}
         <div className="card">
-          <div className="card-head">
-            <h3>Recent Activity</h3>
-          </div>
+          <div className="card-head"><h3>Recent Activity</h3></div>
           <ul className="activity-list">
             {uploads.slice(0, 5).map((row) => (
               <li key={row.filename + row.uploaded_at}>
@@ -146,11 +135,9 @@ export default function Dashboard() {
           </ul>
         </div>
 
-        {/* Right: Discrepancies */}
+        {/* Discrepancies */}
         <div className="card">
-          <div className="card-head">
-            <h3>Discrepancies</h3>
-          </div>
+          <div className="card-head"><h3>Discrepancies</h3></div>
           <ul className="error-list">
             {errorRows.length === 0 && <li>No errors detected</li>}
             {errorRows.map((row) => (
@@ -160,26 +147,14 @@ export default function Dashboard() {
                   {row.invoice_id} / {row.ratesheet_id}
                 </div>
                 <div className="err-actions">
-                  <button
-                    className="btn-outline small"
-                    type="button"
-                    onClick={async () => {
-                      await retryUpload(row.id || row.recolination_id);
-                      await fetchUploads();
-                    }}
-                  >
-                    Retry
-                  </button>
-                  <button
-                    className="btn-outline small"
-                    type="button"
-                    onClick={async () => {
-                      await markFixed(row.id || row.recolination_id);
-                      await fetchUploads();
-                    }}
-                  >
-                    Fix
-                  </button>
+                  <button className="btn-outline small" onClick={async () => {
+                    await retryUpload(row.id || row.recolination_id);
+                    await fetchUploads();
+                  }}>Retry</button>
+                  <button className="btn-outline small" onClick={async () => {
+                    await markFixed(row.id || row.recolination_id);
+                    await fetchUploads();
+                  }}>Fix</button>
                 </div>
               </li>
             ))}
@@ -219,15 +194,7 @@ export default function Dashboard() {
                   <td>{row.filename}</td>
                   <td>{new Date(row.uploaded_at).toLocaleDateString()}</td>
                   <td>
-                    <span
-                      className={`status ${
-                        row.status === "error"
-                          ? "err"
-                          : row.status === "pending"
-                          ? "pending"
-                          : "ok"
-                      }`}
-                    >
+                    <span className={`status ${row.status === "error" ? "err" : row.status === "pending" ? "pending" : "ok"}`}>
                       {row.status}
                     </span>
                   </td>
@@ -243,38 +210,24 @@ export default function Dashboard() {
       <div className="quick-actions horizontal">
         <input
           type="file"
-          id="invoice-upload"
-          style={{ position: "absolute", left: "-9999px" }}
+          ref={invoiceInputRef}
+          style={{ display: "none" }}
           onChange={handleInvoiceUpload}
         />
         <input
           type="file"
-          id="ratesheet-upload"
-          style={{ position: "absolute", left: "-9999px" }}
+          ref={rateSheetInputRef}
+          style={{ display: "none" }}
           onChange={handleRateSheetUpload}
         />
 
-        <button
-          type="button"
-          className="qa-btn"
-          onClick={() => document.getElementById("invoice-upload").click()}
-        >
+        <button className="qa-btn" onClick={() => invoiceInputRef.current && invoiceInputRef.current.click()}>
           Upload Invoices
         </button>
-        <button
-          type="button"
-          className="qa-btn"
-          onClick={() => document.getElementById("ratesheet-upload").click()}
-        >
+        <button className="qa-btn" onClick={() => rateSheetInputRef.current && rateSheetInputRef.current.click()}>
           Upload Rate Sheets
         </button>
-        <button
-          type="button"
-          className="qa-btn"
-          onClick={generateReports}
-        >
-          Generate Reports
-        </button>
+        <button className="qa-btn" onClick={generateReports}>Generate Reports</button>
       </div>
 
       <footer className="dash-footer">© 2025 TallyHauls – All Rights Reserved</footer>
