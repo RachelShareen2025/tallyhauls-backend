@@ -1,14 +1,15 @@
 /* ---------- Brand tokens ---------- */
 :root {
   --brand-text: #2d3959;
-  --brand-accent: #33c898; /* main accent green */
-  --brand-green: #22c55e; /* reserved for charts/dots */
+  --brand-accent: #33c898;
+  --brand-green: #22c55e; /* ✅ Added proper green */
   --bg: #f5f7fb;
   --card: #ffffff;
   --muted: #6b7280;
   --shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
   --radius: 12px;
 }
+
 
 /* ---------- Layout ---------- */
 .dashboard-container {
@@ -19,6 +20,7 @@
   display: flex;
   flex-direction: column;
 }
+
 
 /* ---------- Header ---------- */
 .dashboard-header {
@@ -33,10 +35,12 @@
   z-index: 100;
 }
 
+
 .logo {
   width: 150px;
   height: auto;
 }
+
 
 /* ---------- Header Nav ---------- */
 .dashboard-nav {
@@ -45,6 +49,7 @@
   gap: 16px;
 }
 
+
 .dashboard-nav a {
   text-decoration: none;
   color: var(--brand-text);
@@ -52,27 +57,30 @@
   transition: color 0.2s ease;
 }
 
+
 .dashboard-nav a:hover {
   color: var(--brand-accent);
 }
 
-/* ---------- Logout Button (same as qa-btn) ---------- */
+
 .logout-btn {
-  background: var(--brand-accent);
-  color: white;
-  border: none;
   padding: 8px 16px;
-  border-radius: var(--radius);
-  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  background-color: var(--brand-green); /* ✅ Now true green */
+  color: #fff;
+  font-weight: 500; /* same as nav */
   font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.2s ease, transform 0.1s ease;
 }
 
+
 .logout-btn:hover {
-  background: #2fb487;
+  background-color: #16a34a; /* darker green hover */
   transform: translateY(-1px);
 }
+
 
 /* ---------- Secure Banner ---------- */
 .secure-banner {
@@ -83,6 +91,7 @@
   font-weight: 500;
 }
 
+
 /* ---------- KPI Bar ---------- */
 .kpi-bar {
   display: flex;
@@ -91,6 +100,7 @@
   margin-bottom: 24px;
 }
 
+
 .kpi-card {
   background: var(--card);
   box-shadow: var(--shadow);
@@ -98,6 +108,7 @@
   flex: 1;
   padding: 16px;
 }
+
 
 .kpi-top {
   font-size: 0.85rem;
@@ -108,10 +119,12 @@
   gap: 6px;
 }
 
+
 .kpi-value {
   font-size: 1.5rem;
   font-weight: 700;
 }
+
 
 .dot {
   width: 8px;
@@ -120,11 +133,13 @@
   display: inline-block;
 }
 
+
 .dot-green { background: #22c55e; }
 .dot-amber { background: #f59e0b; }
 .dot-red { background: #ef4444; }
 .dot-blue { background: #3b82f6; }
 .dot-purple { background: #8b5cf6; }
+
 
 /* ---------- Cards ---------- */
 .card {
@@ -134,6 +149,7 @@
   padding: 16px;
 }
 
+
 .card-head {
   display: flex;
   justify-content: space-between;
@@ -141,11 +157,13 @@
   margin-bottom: 12px;
 }
 
+
 .card-head h3 {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
 }
+
 
 /* ---------- Two Column Layout ---------- */
 .two-col {
@@ -155,12 +173,14 @@
   padding: 0 24px 24px;
 }
 
+
 /* ---------- Activity List ---------- */
 .activity-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
+
 
 .activity-list li {
   display: flex;
@@ -170,10 +190,12 @@
   border-bottom: 1px solid #eee;
 }
 
+
 .activity-list .time {
   color: var(--muted);
   width: 80px;
 }
+
 
 /* ---------- Error List ---------- */
 .error-list {
@@ -181,6 +203,7 @@
   margin: 0;
   padding: 0;
 }
+
 
 .error-list li {
   display: flex;
@@ -190,16 +213,19 @@
   border-bottom: 1px solid #eee;
 }
 
+
 .err-main {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
+
 .err-actions {
   display: flex;
   gap: 8px;
 }
+
 
 .badge {
   font-size: 0.75rem;
@@ -209,8 +235,10 @@
   color: #fff;
 }
 
+
 .badge.medium { background: #f59e0b; }
 .badge.high, .badge { background: #ef4444; }
+
 
 /* ---------- Table ---------- */
 .table-head {
@@ -219,10 +247,12 @@
   align-items: center;
 }
 
+
 .filters {
   display: flex;
   gap: 10px;
 }
+
 
 .filters input,
 .filters select {
@@ -232,9 +262,11 @@
   font-size: 0.85rem;
 }
 
+
 .table-wrap {
   overflow-x: auto;
 }
+
 
 .data-table {
   width: 100%;
@@ -242,11 +274,13 @@
   font-size: 0.9rem;
 }
 
+
 .data-table th,
 .data-table td {
   padding: 10px;
   border-bottom: 1px solid #eee;
 }
+
 
 .data-table th {
   text-align: left;
@@ -254,9 +288,11 @@
   font-weight: 500;
 }
 
+
 .data-table td.right {
   text-align: right;
 }
+
 
 .status {
   padding: 2px 8px;
@@ -265,9 +301,11 @@
   font-weight: 600;
 }
 
+
 .status.ok { background: #dcfce7; color: #166534; }
 .status.err { background: #fee2e2; color: #991b1b; }
 .status.pending { background: #fef9c3; color: #854d0e; }
+
 
 /* ---------- Quick Actions ---------- */
 .quick-actions {
@@ -276,6 +314,7 @@
   justify-content: center;
   padding: 24px;
 }
+
 
 .qa-btn {
   background: var(--brand-accent);
@@ -289,9 +328,11 @@
   transition: 0.2s;
 }
 
+
 .qa-btn:hover {
   background: #2fb487;
 }
+
 
 /* ---------- Buttons ---------- */
 .btn-outline {
@@ -304,14 +345,17 @@
   font-weight: 600;
 }
 
+
 .btn-outline.small {
   padding: 4px 8px;
   font-size: 0.8rem;
 }
 
+
 .btn-outline:hover {
   background: #f0fdfa;
 }
+
 
 .btn-text {
   border: none;
@@ -320,9 +364,11 @@
   cursor: pointer;
 }
 
+
 .btn-text.small {
   font-size: 0.8rem;
 }
+
 
 /* ---------- Footer ---------- */
 .dash-footer {
