@@ -118,15 +118,6 @@ export default function Dashboard() {
       <div className="card" style={{ margin: "0 24px 24px" }}>
         <div className="card-head table-head">
           <h3>Uploads</h3>
-          <div className="filters">
-            <input type="text" placeholder="Search…" />
-            <select>
-              <option>Status</option>
-              <option>Successful</option>
-              <option>Pending</option>
-              <option>Errors</option>
-            </select>
-          </div>
         </div>
         <div className="table-wrap">
           <table className="data-table">
