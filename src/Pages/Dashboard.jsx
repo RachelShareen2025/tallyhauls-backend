@@ -5,7 +5,6 @@ import { supabase } from "../supabaseClient";
 import { uploadInvoiceFile } from "../features/uploadInvoiceFile";
 import { uploadRateSheets } from "../features/uploadRateSheets";
 import { generateReports } from "../features/generateReports";
-import { retryUpload, markFixed } from "../features/reconcileInvoice";
 
 export default function Dashboard() {
   const [showBanner, setShowBanner] = useState(true);
@@ -71,8 +70,6 @@ export default function Dashboard() {
     }
   };
 
-  const errorRows = recolinations.filter((r) => r.status === "error");
-
   return (
     <div className="dashboard-container">
       {/* Header */}
@@ -81,7 +78,6 @@ export default function Dashboard() {
           <img src="/logo.png" alt="TallyHauls Logo" className="logo" />
         </div>
         <nav className="dashboard-nav">
-          <a href="/reports">Reports</a>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </nav>
       </header>
@@ -104,7 +100,9 @@ export default function Dashboard() {
         </div>
         <div className="kpi-card">
           <div className="kpi-top"><span className="dot dot-red"></span> Errors Detected & Fixed</div>
-          <div className="kpi-value">{errorRows.length}</div>
+          <div className="kpi-value">
+            {recolinations.filter((r) => r.status === "error").length}
+          </div>
         </div>
         <div className="kpi-card">
           <div className="kpi-top"><span className="dot dot-blue"></span> Total Files Uploaded</div>
@@ -113,49 +111,6 @@ export default function Dashboard() {
         <div className="kpi-card">
           <div className="kpi-top"><span className="dot dot-purple"></span> Time Saved This Week</div>
           <div className="kpi-value">72 hrs</div>
-        </div>
-      </div>
-
-      {/* Two Column Layout */}
-      <div className="two-col">
-        {/* Recent Activity */}
-        <div className="card" style={{ minHeight: "200px" }}>
-          <div className="card-head"><h3>Recent Activity</h3></div>
-          <ul className="activity-list">
-            {uploads.length === 0 && <li>No recent activity yet.</li>}
-            {uploads.slice(0, 5).map((row) => (
-              <li key={row.filename + row.uploaded_at}>
-                <span className="time">{new Date(row.uploaded_at).toLocaleTimeString()}</span>
-                <span className="text">{row.filename} uploaded ({row.status})</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Discrepancies */}
-        <div className="card" style={{ minHeight: "200px" }}>
-          <div className="card-head"><h3>Discrepancies</h3></div>
-          <ul className="error-list">
-            {errorRows.length === 0 && <li>No errors detected</li>}
-            {errorRows.map((row) => (
-              <li key={row.invoice_id + row.ratesheet_id}>
-                <div className="err-main">
-                  <span className="badge medium">{row.errors || "Error"}</span>
-                  {row.invoice_id} / {row.ratesheet_id}
-                </div>
-                <div className="err-actions">
-                  <button className="btn-outline small" onClick={async () => {
-                    await retryUpload(row.id || row.recolination_id);
-                    await fetchUploads();
-                  }}>Retry</button>
-                  <button className="btn-outline small" onClick={async () => {
-                    await markFixed(row.id || row.recolination_id);
-                    await fetchUploads();
-                  }}>Fix</button>
-                </div>
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
 
