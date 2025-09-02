@@ -5,7 +5,7 @@ import { supabase } from "../supabaseClient";
 import { uploadInvoiceFile } from "../features/uploadInvoiceFile";
 import { uploadRateSheets } from "../features/uploadRateSheets";
 import { generateReports } from "../features/generateReports";
-import { reconcileInvoice, retryUpload, markFixed } from "../features/reconcileInvoice";
+import { retryUpload, markFixed } from "../features/reconcileInvoice";
 
 export default function Dashboard() {
   const [showBanner, setShowBanner] = useState(true);
@@ -13,11 +13,9 @@ export default function Dashboard() {
   const [recolinations, setRecolinations] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // React refs for hidden file inputs
   const invoiceInputRef = useRef(null);
   const rateSheetInputRef = useRef(null);
 
-  // Fetch uploads & recolinations
   const fetchUploads = async () => {
     setLoading(true);
     try {
@@ -44,7 +42,7 @@ export default function Dashboard() {
     const fetchUserAndData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
-        window.location.href = "/"; // redirect if not logged in
+        window.location.href = "/";
       } else {
         await fetchUploads();
       }
@@ -57,7 +55,6 @@ export default function Dashboard() {
     window.location.href = "/";
   };
 
-  // File upload handlers
   const handleInvoiceUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -74,7 +71,6 @@ export default function Dashboard() {
     }
   };
 
-  // Errors for Discrepancies card
   const errorRows = recolinations.filter((r) => r.status === "error");
 
   return (
@@ -123,9 +119,10 @@ export default function Dashboard() {
       {/* Two Column Layout */}
       <div className="two-col">
         {/* Recent Activity */}
-        <div className="card">
+        <div className="card" style={{ minHeight: "200px" }}>
           <div className="card-head"><h3>Recent Activity</h3></div>
           <ul className="activity-list">
+            {uploads.length === 0 && <li>No recent activity yet.</li>}
             {uploads.slice(0, 5).map((row) => (
               <li key={row.filename + row.uploaded_at}>
                 <span className="time">{new Date(row.uploaded_at).toLocaleTimeString()}</span>
@@ -136,7 +133,7 @@ export default function Dashboard() {
         </div>
 
         {/* Discrepancies */}
-        <div className="card">
+        <div className="card" style={{ minHeight: "200px" }}>
           <div className="card-head"><h3>Discrepancies</h3></div>
           <ul className="error-list">
             {errorRows.length === 0 && <li>No errors detected</li>}
@@ -188,6 +185,13 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
+              {uploads.length === 0 && (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: "center", padding: "16px" }}>
+                    No uploads yet.
+                  </td>
+                </tr>
+              )}
               {uploads.map((row) => (
                 <tr key={row.recolination_id || row.filename + row.uploaded_at}>
                   <td>{row.recolination_id || "-"}</td>
@@ -207,7 +211,7 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="quick-actions horizontal">
+      <div className="quick-actions horizontal" style={{ marginBottom: "32px" }}>
         <input
           type="file"
           ref={invoiceInputRef}
