@@ -9,7 +9,7 @@ import { generateReports } from "../features/generateReports";
 export default function Dashboard() {
   const [showBanner, setShowBanner] = useState(true);
   const [uploads, setUploads] = useState([]);
-  const [recolinations, setRecolinations] = useState([]);
+  const [reconciliations, setReconciliations] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const invoiceInputRef = useRef(null);
@@ -18,20 +18,35 @@ export default function Dashboard() {
   const fetchUploads = async () => {
     setLoading(true);
     try {
-      const { data: uploadsData, error: uploadsErr } = await supabase
-        .from("uploads")
+      // Fetch invoices
+      const { data: invoiceData, error: invoiceErr } = await supabase
+        .from("invoices")
         .select("*")
         .order("uploaded_at", { ascending: false });
-      if (uploadsErr) throw uploadsErr;
-      setUploads(uploadsData || []);
+      if (invoiceErr) throw invoiceErr;
 
-      const { data: recolData, error: recolErr } = await supabase
-        .from("recolination")
+      // Fetch ratesheets
+      const { data: rateSheetData, error: rateErr } = await supabase
+        .from("ratesheets")
+        .select("*")
+        .order("uploaded_at", { ascending: false });
+      if (rateErr) throw rateErr;
+
+      // Combine for single table
+      const combinedUploads = [
+        ...invoiceData.map((i) => ({ ...i, type: "invoice" })),
+        ...rateSheetData.map((r) => ({ ...r, type: "ratesheet" })),
+      ];
+      setUploads(combinedUploads);
+
+      // Fetch reconciliation reports
+      const { data: recData, error: recErr } = await supabase
+        .from("reconciliation_reports")
         .select("*");
-      if (recolErr) throw recolErr;
-      setRecolinations(recolData || []);
+      if (recErr) throw recErr;
+      setReconciliations(recData || []);
     } catch (err) {
-      console.error("Error fetching uploads/recolinations:", err.message);
+      console.error("Error fetching data:", err.message);
     } finally {
       setLoading(false);
     }
@@ -57,7 +72,8 @@ export default function Dashboard() {
   const handleInvoiceUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
-      await uploadInvoiceFile(file);
+      // Pass brokerId if available
+      await uploadInvoiceFile(file, null);
       await fetchUploads();
     }
   };
@@ -65,7 +81,8 @@ export default function Dashboard() {
   const handleRateSheetUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
-      await uploadRateSheets(file);
+      // Pass brokerId if available
+      await uploadRateSheets(file, null);
       await fetchUploads();
     }
   };
@@ -89,74 +106,28 @@ export default function Dashboard() {
         <div className="kpi-card">
           <div className="kpi-top"><span className="dot dot-amber"></span> Pending Invoices</div>
           <div className="kpi-value">
-            {uploads.filter((u) => u.status === "pending" && u.type === "invoice").length}
+            {uploads.filter((u) => u.type === "invoice" && u.parse_status === null).length}
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-top"><span className="dot dot-green"></span> Cleared Invoices</div>
+          <div className="kpi-top"><span className="dot dot-green"></span> Total Invoices</div>
           <div className="kpi-value">
-            {uploads.filter((u) => u.status === "cleared" && u.type === "invoice").length}
+            {uploads.filter((u) => u.type === "invoice").length}
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-top"><span className="dot dot-red"></span> Errors Detected & Fixed</div>
+          <div className="kpi-top"><span className="dot dot-red"></span> Reconciliation Errors</div>
           <div className="kpi-value">
-            {recolinations.filter((r) => r.status === "error").length}
+            {reconciliations.filter((r) => r.reconciliation_status === "discrepancy").length}
           </div>
         </div>
         <div className="kpi-card">
           <div className="kpi-top"><span className="dot dot-blue"></span> Total Files Uploaded</div>
           <div className="kpi-value">{uploads.length}</div>
         </div>
-        <div className="kpi-card">
-          <div className="kpi-top"><span className="dot dot-purple"></span> Time Saved This Week</div>
-          <div className="kpi-value">72 hrs</div>
-        </div>
       </div>
 
-      {/* Data Table */}
-      <div className="card" style={{ margin: "0 24px 24px" }}>
-        <div className="card-head table-head">
-          <h3>Uploads</h3>
-        </div>
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>File</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th className="right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {uploads.length === 0 && (
-                <tr>
-                  <td colSpan="5" style={{ textAlign: "center", padding: "16px" }}>
-                    No uploads yet.
-                  </td>
-                </tr>
-              )}
-              {uploads.map((row) => (
-                <tr key={row.recolination_id || row.filename + row.uploaded_at}>
-                  <td>{row.recolination_id || "-"}</td>
-                  <td>{row.filename}</td>
-                  <td>{new Date(row.uploaded_at).toLocaleDateString()}</td>
-                  <td>
-                    <span className={`status ${row.status === "error" ? "err" : row.status === "pending" ? "pending" : "ok"}`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="right">{row.amount || "–"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
+      {/* Upload Buttons */}
       <div className="quick-actions horizontal" style={{ marginBottom: "32px" }}>
         <input
           type="file"
@@ -170,7 +141,6 @@ export default function Dashboard() {
           style={{ display: "none" }}
           onChange={handleRateSheetUpload}
         />
-
         <button className="qa-btn" onClick={() => invoiceInputRef.current && invoiceInputRef.current.click()}>
           Upload Invoices
         </button>
@@ -178,6 +148,38 @@ export default function Dashboard() {
           Upload Rate Sheets
         </button>
         <button className="qa-btn" onClick={generateReports}>Generate Reports</button>
+      </div>
+
+      {/* Data Table */}
+      <div className="card" style={{ margin: "0 24px 24px" }}>
+        <div className="card-head table-head"><h3>Uploads</h3></div>
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>File</th>
+                <th>Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {uploads.length === 0 && (
+                <tr>
+                  <td colSpan="4" style={{ textAlign: "center", padding: "16px" }}>No uploads yet.</td>
+                </tr>
+              )}
+              {uploads.map((row) => (
+                <tr key={row.id}>
+                  <td>{row.type}</td>
+                  <td><a href={row.file_url} target="_blank" rel="noreferrer">{row.file_name}</a></td>
+                  <td>{new Date(row.uploaded_at).toLocaleDateString()}</td>
+                  <td>{row.parse_status || "pending"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <footer className="dash-footer">© 2025 TallyHauls – All Rights Reserved</footer>

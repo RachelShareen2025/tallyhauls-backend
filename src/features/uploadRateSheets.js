@@ -1,39 +1,46 @@
 // src/features/uploadRateSheets.js
 import { supabase } from "../supabaseClient";
 
-export const uploadRateSheets = async (file) => {
+const sanitizeFileName = (name) => name.replace(/[^\w.\-]+/g, "_");
+
+export const uploadRateSheets = async (file, brokerId) => {
   if (!file) {
     alert("Please select a file first.");
     return;
   }
 
   try {
-    // Upload to storage bucket
-    const { data, error } = await supabase.storage
-      .from("ratesheets")
-      .upload(file.name, file, { upsert: true }); // upsert avoids duplicate errors
+    // Unique path in 'ratesheets' bucket
+    const path = `${brokerId || "anon"}/${Date.now()}-${sanitizeFileName(file.name)}`;
 
-    if (error) throw error;
+    // Upload to 'ratesheets' bucket
+    const { data: storageData, error: storageErr } = await supabase.storage
+      .from("ratesheets")
+      .upload(path, file, { upsert: true });
+
+    if (storageErr) throw storageErr;
+
+    // Get public URL
+    const { publicUrl } = supabase.storage.from("ratesheets").getPublicUrl(path);
 
     // Get current user
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError) throw userError;
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr) throw userErr;
+    const uploaderId = userData?.user?.id || null;
 
-    const userId = userData?.user?.id || null;
-
-    // Insert metadata row in "uploads" table
-    const { error: dbError } = await supabase.from("uploads").insert([
+    // Insert into ratesheets table
+    const { error: dbErr } = await supabase.from("ratesheets").insert([
       {
-        filename: file.name,
-        type: "ratesheet",
-        bucket: "ratesheets",
-        uploaded_by: userId,
-        uploaded_at: new Date(),
-        status: "pending",
+        file_url: publicUrl,
+        file_name: file.name,
+        file_type: "ratesheet",
+        uploaded_at: new Date().toISOString(),
+        uploader_id: uploaderId,
+        broker_id: brokerId || null,
+        parse_status: null,
       },
     ]);
-
-    if (dbError) throw dbError;
+    if (dbErr) throw dbErr;
 
     alert(`✅ Rate sheet uploaded successfully: ${file.name}`);
   } catch (err) {

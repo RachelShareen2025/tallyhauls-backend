@@ -3,16 +3,16 @@ import { supabase } from "../supabaseClient";
 
 const sanitizeFileName = (name) => name.replace(/[^\w.\-]+/g, "_");
 
-export async function uploadInvoiceFile(file) {
+export async function uploadInvoiceFile(file, brokerId) {
   if (!file) throw new Error("No file provided.");
 
-  // Get user (v2 API)
+  // Get logged-in user
   const { data: userData, error: userErr } = await supabase.auth.getUser();
   if (userErr) throw userErr;
-  const userId = userData?.user?.id || "anon";
+  const uploaderId = userData?.user?.id || "anon";
 
-  // Always-unique storage path
-  const path = `${userId}/${Date.now()}-${sanitizeFileName(file.name)}`;
+  // Unique path in 'invoices' bucket
+  const path = `${uploaderId}/${Date.now()}-${sanitizeFileName(file.name)}`;
 
   // Upload to 'invoices' bucket
   const { data: storageData, error: storageErr } = await supabase.storage
@@ -23,16 +23,19 @@ export async function uploadInvoiceFile(file) {
     });
   if (storageErr) throw storageErr;
 
-  // Insert metadata row
-  const { error: dbErr } = await supabase.from("uploads").insert([
+  // Get public URL
+  const { publicUrl } = supabase.storage.from("invoices").getPublicUrl(path);
+
+  // Insert into invoices table
+  const { error: dbErr } = await supabase.from("invoices").insert([
     {
-      filename: file.name,
-      path,
-      type: "invoice",
-      bucket: "invoices",
-      uploaded_by: userId,
+      file_url: publicUrl,
+      file_name: file.name,
+      file_type: "invoice",
       uploaded_at: new Date().toISOString(),
-      status: "pending",
+      uploader_id: uploaderId,
+      broker_id: brokerId || null,
+      parse_status: null,
     },
   ]);
   if (dbErr) throw dbErr;
