@@ -1,58 +1,30 @@
-// src/features/generateReports.js
 import { supabase } from "../supabaseClient";
 
-/**
- * Fetches upload stats and downloads a CSV summary client-side.
- * Returns the computed stats as well.
- */
 export async function generateReports() {
-  // Pull everything (scope with RLS to current user in your policies)
+  // Fetch all invoices uploaded by the current user
   const { data, error } = await supabase
-    .from("uploads")
-    .select("id, filename, type, bucket, status, uploaded_by, uploaded_at, path, error_details")
+    .from("invoices")
+    .select("id, file_name, file_url, uploaded_at")
     .order("uploaded_at", { ascending: false });
 
-  if (error) throw error;
-
-  // Aggregate stats
-  const stats = {
-    total: data.length,
-    byStatus: { pending: 0, success: 0, error: 0, cleared: 0 },
-    byType: { invoice: 0, ratesheet: 0 },
-  };
-
-  for (const row of data) {
-    if (stats.byStatus[row.status] !== undefined) stats.byStatus[row.status] += 1;
-    if (stats.byType[row.type] !== undefined) stats.byType[row.type] += 1;
+  if (error) {
+    console.error("Error fetching invoices for report:", error.message);
+    return;
   }
 
-  // Build CSV
-  const header = [
-    "id",
-    "filename",
-    "type",
-    "bucket",
-    "status",
-    "uploaded_by",
-    "uploaded_at",
-    "path",
-    "error_details",
-  ];
+  // Build a simple CSV
+  const header = ["id", "file_name", "file_url", "uploaded_at"];
   const lines = [header.join(",")];
-  for (const row of data) {
+  data.forEach((row) => {
     const line = [
       row.id,
-      safe(row.filename),
-      row.type,
-      row.bucket,
-      row.status,
-      row.uploaded_by,
+      `"${row.file_name.replace(/"/g, '""')}"`,
+      row.file_url,
       row.uploaded_at,
-      safe(row.path),
-      safe(row.error_details),
     ].join(",");
     lines.push(line);
-  }
+  });
+
   const csv = lines.join("\n");
 
   // Trigger download
@@ -61,18 +33,11 @@ export async function generateReports() {
   const link = document.createElement("a");
   link.href = url;
   const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-  link.download = `tallyhauls-report-${ts}.csv`;
+  link.download = `tallyhauls-invoices-${ts}.csv`;
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
 
-  return { stats, rows: data };
-}
-
-function safe(val) {
-  if (val == null) return "";
-  // Escape quotes and wrap in quotes to keep commas safe
-  const s = String(val).replace(/"/g, '""');
-  return `"${s}"`;
+  return { rows: data };
 }

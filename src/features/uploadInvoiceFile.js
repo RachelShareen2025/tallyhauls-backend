@@ -1,9 +1,8 @@
-// src/features/uploadInvoiceFile.js
 import { supabase } from "../supabaseClient";
 
 const sanitizeFileName = (name) => name.replace(/[^\w.\-]+/g, "_");
 
-export async function uploadInvoiceFile(file, brokerId) {
+export async function uploadInvoiceFile(file, type = "invoice", brokerId = null) {
   if (!file) throw new Error("No file provided.");
 
   // Get logged-in user
@@ -31,11 +30,10 @@ export async function uploadInvoiceFile(file, brokerId) {
     {
       file_url: publicUrl,
       file_name: file.name,
-      file_type: "invoice",
+      file_type: type,            // dynamic type: "invoice" or "ratesheet"
       uploaded_at: new Date().toISOString(),
       uploader_id: uploaderId,
-      broker_id: brokerId || null,
-      parse_status: null,
+      broker_id: brokerId,
     },
   ]);
   if (dbErr) throw dbErr;
