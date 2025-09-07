@@ -13,7 +13,8 @@
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.8.0",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "xlsx-style": "^0.8.13"
   },
   "scripts": {
     "start": "react-scripts start",
