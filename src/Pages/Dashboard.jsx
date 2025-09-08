@@ -1,3 +1,4 @@
+// src/Dashboard.jsx
 import React, { useState, useEffect, useRef } from "react";
 import "./Dashboard.css";
 import { supabase } from "../supabaseClient";
@@ -10,7 +11,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const invoiceInputRef = useRef(null);
 
-  // Fetch invoices from Supabase
   const fetchInvoices = async () => {
     setLoading(true);
     try {
@@ -22,7 +22,6 @@ export default function Dashboard() {
            projected_cash_date, uploaded_at, file_url`
         )
         .order("uploaded_at", { ascending: false });
-
       if (error) throw error;
       setInvoices(data || []);
     } catch (err) {
@@ -35,8 +34,11 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchUserAndData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) window.location.href = "/";
-      else await fetchInvoices();
+      if (!session?.user) {
+        window.location.href = "/";
+      } else {
+        await fetchInvoices();
+      }
     };
     fetchUserAndData();
   }, []);
@@ -54,7 +56,7 @@ export default function Dashboard() {
     }
   };
 
-  // ---------- KPI calculations ----------
+  // KPI calculations
   const pendingInvoices = invoices.filter((inv) => inv.status !== "Paid");
   const paidInvoices = invoices.filter((inv) => inv.status === "Paid");
   const totalAmount = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
@@ -69,11 +71,15 @@ export default function Dashboard() {
           <img src="/logo.png" alt="TallyHauls Logo" className="logo" />
         </div>
         <nav className="dashboard-nav">
-          <button className="logout-btn" onClick={handleLogout}>Logout</button>
+          <button className="logout-btn" onClick={handleLogout}>
+            Logout
+          </button>
         </nav>
       </header>
 
-      {showBanner && <div className="secure-banner">You are securely logged in.</div>}
+      {showBanner && (
+        <div className="secure-banner">You are securely logged in.</div>
+      )}
 
       {/* KPI Bar */}
       <div className="kpi-bar">
@@ -93,14 +99,25 @@ export default function Dashboard() {
 
       {/* Upload + Actions */}
       <div className="quick-actions horizontal" style={{ marginBottom: "32px" }}>
-        <input type="file" ref={invoiceInputRef} style={{ display: "none" }} onChange={handleInvoiceUpload} />
-        <button className="qa-btn" onClick={() => invoiceInputRef.current && invoiceInputRef.current.click()}>Upload Invoices</button>
-        <button className="qa-btn" onClick={generateReports}>Generate Reports</button>
+        <input
+          type="file"
+          ref={invoiceInputRef}
+          style={{ display: "none" }}
+          onChange={handleInvoiceUpload}
+        />
+        <button className="qa-btn" onClick={() => invoiceInputRef.current && invoiceInputRef.current.click()}>
+          Upload Invoices
+        </button>
+        <button className="qa-btn" onClick={generateReports}>
+          Generate Reports
+        </button>
       </div>
 
       {/* Invoices Table */}
       <div className="card" style={{ margin: "0 24px 24px" }}>
-        <div className="card-head table-head"><h3>Invoices</h3></div>
+        <div className="card-head table-head">
+          <h3>Invoices</h3>
+        </div>
         <div className="table-wrap">
           <table className="data-table">
             <thead>
@@ -118,7 +135,9 @@ export default function Dashboard() {
             <tbody>
               {invoices.length === 0 && (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: "center", padding: "16px" }}>No invoices uploaded yet.</td>
+                  <td colSpan="8" style={{ textAlign: "center", padding: "16px" }}>
+                    No invoices uploaded yet.
+                  </td>
                 </tr>
               )}
               {invoices.map((inv) => (
@@ -138,7 +157,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <footer className="dash-footer">© 2025 TallyHauls – All Rights Reserved</footer>
+      <footer className="dash-footer">
+        © 2025 TallyHauls – All Rights Reserved
+      </footer>
     </div>
   );
 }

@@ -35,19 +35,23 @@
 .logo { width: 150px; height: auto; }
 .dashboard-nav { display: flex; align-items: center; gap: 16px; }
 
+/* ---------- Logout Button ---------- */
 .logout-btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: var(--radius);
-  background-color: var(--brand-accent);
-  color: #fff;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.1s ease;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  padding: 10px 20px !important;
+  border: none !important;
+  border-radius: var(--radius) !important;
+  background-color: var(--brand-accent) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  cursor: pointer !important;
+  transition: background 0.2s ease, transform 0.1s ease !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
 }
-.logout-btn:hover { background-color: #2fb487; transform: translateY(-1px); }
+.logout-btn:hover {
+  background-color: #2fb487 !important;
+  transform: translateY(-1px) !important;
+}
 
 /* ---------- Secure Banner ---------- */
 .secure-banner {
@@ -165,6 +169,5 @@
 
 /* ---------- Flagged Row ---------- */
 .row-flagged {
-  background-color: #ffe5e5; /* light red highlight */
-  transition: background 0.2s ease;
+  background: #fff5f5 !important;
 }
