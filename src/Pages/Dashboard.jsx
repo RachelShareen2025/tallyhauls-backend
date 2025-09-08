@@ -11,6 +11,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const invoiceInputRef = useRef(null);
 
+  // Fetch invoices from Supabase
   const fetchInvoices = async () => {
     setLoading(true);
     try {
@@ -22,6 +23,7 @@ export default function Dashboard() {
            load_number, notes, uploaded_at, file_url`
         )
         .order("uploaded_at", { ascending: false });
+
       if (error) throw error;
       setInvoices(data || []);
     } catch (err) {
@@ -31,6 +33,7 @@ export default function Dashboard() {
     }
   };
 
+  // On mount: check auth + fetch invoices
   useEffect(() => {
     const fetchUserAndData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -43,15 +46,17 @@ export default function Dashboard() {
     fetchUserAndData();
   }, []);
 
+  // Logout
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = "/";
   };
 
+  // Upload invoice handler
   const handleInvoiceUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
-      await uploadInvoiceFile(file, null);
+      await uploadInvoiceFile(file); // fixed: only pass file
       await fetchInvoices();
     }
   };
@@ -59,9 +64,9 @@ export default function Dashboard() {
   // KPI calculations
   const pendingInvoices = invoices.filter((inv) => inv.status !== "Paid");
   const paidInvoices = invoices.filter((inv) => inv.status === "Paid");
-  const totalAmount = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-  const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-  const paidAmount = paidInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+  const totalAmount = invoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+  const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+  const paidAmount = paidInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
 
   return (
     <div className="dashboard-container">
@@ -85,15 +90,21 @@ export default function Dashboard() {
       <div className="kpi-bar">
         <div className="kpi-card">
           <div className="kpi-top"><span className="dot dot-amber"></span> Pending Invoices</div>
-          <div className="kpi-value">{pendingInvoices.length} (${pendingAmount.toFixed(2)})</div>
+          <div className="kpi-value">
+            {pendingInvoices.length} (${pendingAmount.toFixed(2)})
+          </div>
         </div>
         <div className="kpi-card">
           <div className="kpi-top"><span className="dot dot-green"></span> Paid Invoices</div>
-          <div className="kpi-value">{paidInvoices.length} (${paidAmount.toFixed(2)})</div>
+          <div className="kpi-value">
+            {paidInvoices.length} (${paidAmount.toFixed(2)})
+          </div>
         </div>
         <div className="kpi-card">
           <div className="kpi-top"><span className="dot dot-blue"></span> Total Invoices</div>
-          <div className="kpi-value">{invoices.length} (${totalAmount.toFixed(2)})</div>
+          <div className="kpi-value">
+            {invoices.length} (${totalAmount.toFixed(2)})
+          </div>
         </div>
       </div>
 
@@ -105,7 +116,10 @@ export default function Dashboard() {
           style={{ display: "none" }}
           onChange={handleInvoiceUpload}
         />
-        <button className="qa-btn" onClick={() => invoiceInputRef.current && invoiceInputRef.current.click()}>
+        <button
+          className="qa-btn"
+          onClick={() => invoiceInputRef.current && invoiceInputRef.current.click()}
+        >
           Upload Invoices
         </button>
         <button className="qa-btn" onClick={generateReports}>
@@ -146,26 +160,48 @@ export default function Dashboard() {
               )}
               {invoices.map((inv) => {
                 const daysUntilDue = inv.due_date
-                  ? Math.ceil((new Date(inv.due_date) - new Date()) / (1000 * 60 * 60 * 24))
+                  ? Math.ceil(
+                      (new Date(inv.due_date) - new Date()) /
+                        (1000 * 60 * 60 * 24)
+                    )
                   : null;
+
                 return (
                   <tr key={inv.id} className={inv.flagged ? "row-flagged" : ""}>
                     <td>{inv.invoice_number}</td>
-                    <td>{new Date(inv.invoice_date).toLocaleDateString()}</td>
+                    <td>
+                      {inv.invoice_date
+                        ? new Date(inv.invoice_date).toLocaleDateString()
+                        : "—"}
+                    </td>
                     <td>{inv.client_name}</td>
                     <td>{inv.load_number || "—"}</td>
                     <td>{inv.carrier_name}</td>
-                    <td>${inv.amount.toFixed(2)}</td>
+                    <td>${Number(inv.amount).toFixed(2)}</td>
                     <td>{inv.status}</td>
-                    <td>{inv.projected_cash_date ? new Date(inv.projected_cash_date).toLocaleDateString() : "—"}</td>
+                    <td>
+                      {inv.projected_cash_date
+                        ? new Date(inv.projected_cash_date).toLocaleDateString()
+                        : "—"}
+                    </td>
                     <td className={daysUntilDue !== null && daysUntilDue < 0 ? "overdue" : ""}>
-                      {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : "—"}
+                      {inv.due_date
+                        ? new Date(inv.due_date).toLocaleDateString()
+                        : "—"}
                     </td>
                     <td className={daysUntilDue !== null && daysUntilDue < 0 ? "overdue" : ""}>
                       {daysUntilDue !== null ? daysUntilDue : "—"}
                     </td>
                     <td className="notes">{inv.notes || "—"}</td>
-                    <td><a href={inv.file_url} target="_blank" rel="noreferrer">View</a></td>
+                    <td>
+                      {inv.file_url ? (
+                        <a href={inv.file_url} target="_blank" rel="noreferrer">
+                          View
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                   </tr>
                 );
               })}
