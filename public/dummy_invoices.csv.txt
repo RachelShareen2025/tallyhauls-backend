@@ -1,0 +1,6 @@
+Invoice #	Invoice Date	Customer Name	Load #	Carrier Name	Amount	Status	Projected Cash Date	Due Date	Notes	File URL
+INV001	9/1/2025	ACME Corp	L123	FastTrans	500	Unpaid	2025-09-31	9/10/2025	First invoice	#
+INV002	9/2/2025	Beta LLC	L124	QuickShip	750	Paid	10/2/2025	9/12/2025	Paid in full	#
+INV003	8/25/2025	Gamma Inc	L125	SpeedyCar	1200	Partial	9/25/2025	9/5/2025	Partial payment received	#
+INV004	8/15/2025	Delta Co	L126	RapidMove	300	Unpaid	9/14/2025	8/30/2025	Overdue invoice	#
+INV005	9/5/2025	Epsilon Ltd	L127	TransGo	1000	Unpaid	10/5/2025	9/20/2025		
