@@ -1,4 +1,3 @@
-// src/features/generateReports.js
 import * as XLSX from "xlsx";
 import { supabase } from "../supabaseClient";
 
@@ -46,8 +45,9 @@ export async function generateReports() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Invoices");
 
-    // 4. Export to Excel
+    // 4. Export to Excel (browser-safe)
     XLSX.writeFile(workbook, "invoice_report.xlsx");
+
   } catch (err) {
     console.error("Unexpected error:", err.message);
   }

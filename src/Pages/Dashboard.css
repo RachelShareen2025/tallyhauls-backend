@@ -165,5 +165,6 @@
 
 /* ---------- Flagged Row ---------- */
 .row-flagged {
-  background: #fff5f5;
+  background-color: #ffe5e5; /* light red highlight */
+  transition: background 0.2s ease;
 }
