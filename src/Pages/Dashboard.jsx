@@ -17,9 +17,9 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from("invoices")
         .select(
-          `id, invoice_number, invoice_date, customer_name, carrier_name,
-           amount, payment_terms, load_id, status, flagged,
-           projected_cash_date, uploaded_at, file_url`
+          `id, invoice_number, invoice_date, client_name, carrier_name,
+           amount, status, flagged, projected_cash_date, due_date,
+           load_number, notes, uploaded_at, file_url`
         )
         .order("uploaded_at", { ascending: false });
       if (error) throw error;
@@ -125,33 +125,50 @@ export default function Dashboard() {
                 <th>Invoice #</th>
                 <th>Date</th>
                 <th>Customer</th>
+                <th>Load #</th>
                 <th>Carrier</th>
                 <th>Amount</th>
                 <th>Status</th>
                 <th>Projected Cash Date</th>
+                <th>Due Date</th>
+                <th>Days Until Due</th>
+                <th>Notes</th>
                 <th>File</th>
               </tr>
             </thead>
             <tbody>
               {invoices.length === 0 && (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: "center", padding: "16px" }}>
+                  <td colSpan="12" style={{ textAlign: "center", padding: "16px" }}>
                     No invoices uploaded yet.
                   </td>
                 </tr>
               )}
-              {invoices.map((inv) => (
-                <tr key={inv.id} className={inv.flagged ? "row-flagged" : ""}>
-                  <td>{inv.invoice_number}</td>
-                  <td>{new Date(inv.invoice_date).toLocaleDateString()}</td>
-                  <td>{inv.customer_name}</td>
-                  <td>{inv.carrier_name}</td>
-                  <td>${inv.amount.toFixed(2)}</td>
-                  <td>{inv.status}</td>
-                  <td>{inv.projected_cash_date ? new Date(inv.projected_cash_date).toLocaleDateString() : "—"}</td>
-                  <td><a href={inv.file_url} target="_blank" rel="noreferrer">View</a></td>
-                </tr>
-              ))}
+              {invoices.map((inv) => {
+                const daysUntilDue = inv.due_date
+                  ? Math.ceil((new Date(inv.due_date) - new Date()) / (1000 * 60 * 60 * 24))
+                  : null;
+                return (
+                  <tr key={inv.id} className={inv.flagged ? "row-flagged" : ""}>
+                    <td>{inv.invoice_number}</td>
+                    <td>{new Date(inv.invoice_date).toLocaleDateString()}</td>
+                    <td>{inv.client_name}</td>
+                    <td>{inv.load_number || "—"}</td>
+                    <td>{inv.carrier_name}</td>
+                    <td>${inv.amount.toFixed(2)}</td>
+                    <td>{inv.status}</td>
+                    <td>{inv.projected_cash_date ? new Date(inv.projected_cash_date).toLocaleDateString() : "—"}</td>
+                    <td className={daysUntilDue !== null && daysUntilDue < 0 ? "overdue" : ""}>
+                      {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : "—"}
+                    </td>
+                    <td className={daysUntilDue !== null && daysUntilDue < 0 ? "overdue" : ""}>
+                      {daysUntilDue !== null ? daysUntilDue : "—"}
+                    </td>
+                    <td className="notes">{inv.notes || "—"}</td>
+                    <td><a href={inv.file_url} target="_blank" rel="noreferrer">View</a></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

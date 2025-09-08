@@ -139,6 +139,15 @@
   font-weight: 500;
 }
 
+/* ---------- Overdue ---------- */
+.overdue { color: #ef4444; font-weight: 600; }
+
+/* ---------- Notes Column ---------- */
+.data-table td.notes {
+  max-width: 200px;
+  word-wrap: break-word;
+}
+
 /* ---------- Quick Actions ---------- */
 .quick-actions {
   display: flex;
