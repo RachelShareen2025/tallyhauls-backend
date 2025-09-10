@@ -53,20 +53,26 @@ export async function uploadInvoiceFile(file) {
       return { success: false, error: "CSV is empty or invalid" };
     }
 
-    // 4️⃣ Map CSV rows to mandatory fields for DB
-    const invoiceRows = rows.map((row) => ({
-      invoice_number: row["Invoice #"] || null,
-      invoice_date: row["Invoice Date"] || null,
-      client_name: row["Customer Name"] || null,   // ✅ FIXED
-      load_number: row["Load #"] || null,          // ✅ FIXED
-      carrier_name: row["Carrier Name"] || null,
-      amount: parseFloat(row["Amount"]) || 0,
-      status: row["Status"] || "Unpaid",
-      projected_cash_date: row["Projected Cash Date"] || null,
-      due_date: row["Due Date"] || null,
-      notes: row["Notes"] || "",
-      file_url: fileUrl,
-    }));
+    // 4️⃣ Map CSV rows to match Supabase table schema
+    const invoiceRows = rows.map((row) => {
+      const totalCharge = parseFloat(row["Total Charge"]) || 0;
+      const carrierPay = totalCharge * 0.75; // default 75%
+
+      return {
+        load_id: row["Load ID"] || null,
+        bill_date: row["Bill Date"] || null,
+        shipper: row["Shipper"] || null,
+        carrier: row["Carrier"] || null,
+        total_charge: totalCharge,
+        shipper_terms: "Net 30", // default
+        carrier_terms: "Net 15", // default
+        carrier_pay: carrierPay,
+        shipper_paid: false,
+        carrier_paid: false,
+        flagged_reason: null,
+        file_url: fileUrl,
+      };
+    });
 
     console.log("💾 Rows to insert into DB:", invoiceRows);
 

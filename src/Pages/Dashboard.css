@@ -68,14 +68,39 @@
   gap: 20px;
   padding: 0 24px;
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
+.kpi-range-btns {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.kpi-range-btns button {
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--brand-accent);
+  background: white;
+  color: var(--brand-accent);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: 0.2s;
+}
+.kpi-range-btns button.active, .kpi-range-btns button:hover {
+  background: var(--brand-accent);
+  color: #fff;
+}
+
+/* KPI Cards */
 .kpi-card {
   background: var(--card);
   box-shadow: var(--shadow);
   border-radius: var(--radius);
   flex: 1;
   padding: 16px;
+  min-width: 160px;
 }
 
 .kpi-top {
@@ -128,6 +153,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+  min-width: 1200px;
 }
 .data-table th, .data-table td {
   padding: 10px;
@@ -139,22 +165,32 @@
   font-weight: 500;
 }
 
+/* ---------- Editable Inputs in Table ---------- */
+.data-table input[type="number"] {
+  width: 70px;
+  padding: 4px;
+  border-radius: var(--radius);
+  border: 1px solid #ddd;
+}
+
+.data-table input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
 /* ---------- Overdue ---------- */
 .overdue { color: #ef4444; font-weight: 600; }
 
-/* ---------- Notes Column ---------- */
-.data-table td.notes {
-  max-width: 200px;
-  word-wrap: break-word;
-}
-
-/* ---------- Quick Actions ---------- */
+/* ---------- Quick Actions + Search ---------- */
 .quick-actions {
   display: flex;
   gap: 16px;
-  justify-content: center;
-  padding: 24px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  padding: 16px 24px;
 }
+
 .qa-btn {
   background: var(--brand-accent);
   color: white;
@@ -168,6 +204,14 @@
 }
 .qa-btn:hover { background: #2fb487; }
 
+.search-bar {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid #ccc;
+  flex: 1;
+  min-width: 200px;
+}
+
 /* ---------- Footer ---------- */
 .dash-footer {
   text-align: center;
@@ -179,4 +223,38 @@
 /* ---------- Flagged Row ---------- */
 .row-flagged {
   background: #fff5f5 !important;
+}
+
+/* ---------- Table Column Groups Styling ---------- */
+.data-table thead tr:first-child th {
+  text-align: center;
+}
+
+.data-table th:nth-child(1),
+.data-table th:nth-child(2),
+.data-table th:nth-child(3) {
+  border-right: 2px solid #eee; /* Load Details */
+}
+
+.data-table th:nth-child(4),
+.data-table th:nth-child(5),
+.data-table th:nth-child(6),
+.data-table th:nth-child(7) {
+  border-right: 2px solid #eee; /* Shipper Details */
+}
+
+.data-table th:nth-child(8),
+.data-table th:nth-child(9),
+.data-table th:nth-child(10),
+.data-table th:nth-child(11),
+.data-table th:nth-child(12) {
+  border-right: 2px solid #eee; /* Carrier Details */
+}
+
+.data-table th:nth-child(13),
+.data-table th:nth-child(14),
+.data-table th:nth-child(15),
+.data-table th:nth-child(16),
+.data-table th:nth-child(17) {
+  border-right: none; /* Results */
 }
