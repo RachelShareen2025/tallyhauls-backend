@@ -1,0 +1,11 @@
+Load ID,Bill Date,Shipper,Load Rate,Carrier
+1001,2025-08-01,Acme Corp,1000,Fast Transport
+1002,2025-09-05,Globex Inc,500,Quick Haul
+1003,2025-07-20,Initech,1200,Speedy Movers
+2001,2025-07-01,Stark Industries,1500,Lightning Logistics
+2002,2025-09-01,Wayne Enterprises,800,Dark Knight Haul
+2003,2025-06-20,Pied Piper,900,Endframe Transport
+3001,2025-05-01,Oscorp,,Future Haul
+3002,,Umbrella Corp,700,
+3003,2025-09-10,Wonka Industries,,
+,2025-08-01,LexCorp,500,Lex Hauling

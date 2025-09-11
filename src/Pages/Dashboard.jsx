@@ -11,6 +11,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [kpiRange, setKpiRange] = useState(30); // Default 30 days
+  const [uploadStatus, setUploadStatus] = useState(null); // NEW
   const invoiceInputRef = useRef(null);
 
   // Fetch invoices from Supabase
@@ -20,7 +21,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from("invoices")
         .select("*")
-        .order("uploaded_at", { ascending: false });
+        .order("created_at", { ascending: false });
       if (error) throw error;
       setInvoices(data || []);
     } catch (err) {
@@ -49,13 +50,23 @@ export default function Dashboard() {
     window.location.href = "/";
   };
 
-  // Upload invoice handler
+  // Upload invoice handler (UPDATED)
   const handleInvoiceUpload = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      await uploadInvoiceFile(file);
+    if (!file) return;
+
+    setUploadStatus("Uploading...");
+    const result = await uploadInvoiceFile(file);
+
+    if (result.success) {
+      setUploadStatus("✅ Uploaded successfully!");
       await fetchInvoices();
+    } else {
+      setUploadStatus(`❌ Upload failed: ${result.error}`);
     }
+
+    // Clear file input to allow re-upload of same file
+    if (invoiceInputRef.current) invoiceInputRef.current.value = "";
   };
 
   // KPI calculation helper
@@ -64,7 +75,7 @@ export default function Dashboard() {
     const cutoffDate = new Date(now.setDate(now.getDate() + rangeDays));
 
     const filteredInvoices = invoices.filter(inv => {
-      const billDate = inv.invoice_date ? new Date(inv.invoice_date) : null;
+      const billDate = inv.bill_date ? new Date(inv.bill_date) : null;
       return billDate && billDate <= cutoffDate;
     });
 
@@ -183,6 +194,9 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* Upload status */}
+      {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
+
       {/* Invoices Table */}
       <div className="card" style={{ margin: "0 24px 24px" }}>
         <div className="card-head table-head">
@@ -192,24 +206,16 @@ export default function Dashboard() {
           <table className="data-table">
             <thead>
               <tr>
-                {/* Load Details */}
                 <th>Load #</th>
                 <th>Bill Date</th>
-
-                {/* Shipper Details */}
                 <th>Shipper</th>
-                <th>Load Rate ($)</th>   {/* amount first */}
+                <th>Load Rate ($)</th>
                 <th>Shipper Terms</th>
                 <th>Shipper Paid</th>
-
-                {/* Carrier Details */}
                 <th>Carrier</th>
-                <th>Carrier Pay ($)</th> {/* amount first */}
+                <th>Carrier Pay ($)</th>
                 <th>Carrier Terms</th>
                 <th>Carrier Paid</th>
-
-
-                {/* Results */}
                 <th>Net Cash</th>
                 <th>Flagged Reason</th>
                 <th>File</th>
@@ -218,7 +224,7 @@ export default function Dashboard() {
             <tbody>
               {filteredInvoices.length === 0 && (
                 <tr>
-                  <td colSpan="12" style={{ textAlign: "center", padding: "16px" }}>
+                  <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
                     No invoices uploaded yet.
                   </td>
                 </tr>
@@ -226,11 +232,11 @@ export default function Dashboard() {
               {filteredInvoices.map(inv => {
                 const loadCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
                 return (
-                  <tr key={inv.id} className={inv.flagged ? "row-flagged" : ""}>
+                  <tr key={inv.id} className={inv.flagged_reason ? "row-flagged" : ""}>
                     <td>{inv.load_number || "—"}</td>
                     <td>{inv.bill_date ? new Date(inv.bill_date).toLocaleDateString() : "—"}</td>
-
                     <td>{inv.shipper}</td>
+                    <td>{inv.total_charge?.toFixed(2) || "0.00"}</td>
                     <td>
                       <input
                         type="text"
@@ -245,15 +251,7 @@ export default function Dashboard() {
                         onChange={(e) => handleFieldChange(inv.id, "shipper_paid", e.target.checked)}
                       />
                     </td>
-
                     <td>{inv.carrier}</td>
-                    <td>
-                      <input
-                        type="text"
-                        value={inv.carrier_terms || ""}
-                        onChange={(e) => handleFieldChange(inv.id, "carrier_terms", e.target.value)}
-                      />
-                    </td>
                     <td>
                       <input
                         type="number"
@@ -263,14 +261,20 @@ export default function Dashboard() {
                     </td>
                     <td>
                       <input
+                        type="text"
+                        value={inv.carrier_terms || ""}
+                        onChange={(e) => handleFieldChange(inv.id, "carrier_terms", e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
                         type="checkbox"
                         checked={inv.carrier_paid || false}
                         onChange={(e) => handleFieldChange(inv.id, "carrier_paid", e.target.checked)}
                       />
                     </td>
-
                     <td>${loadCash.toFixed(2)}</td>
-                    <td>{inv.flagged || "—"}</td>
+                    <td>{inv.flagged_reason || "—"}</td>
                     <td>
                       {inv.file_url ? (
                         <a href={inv.file_url} target="_blank" rel="noreferrer">View</a>
