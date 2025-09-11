@@ -1,0 +1,4 @@
+Load #,Bill Date,Shipper,Total Charge,Carrier
+L001,2025-09-11,Acme Corp,1000,FastTruck
+L002,2025-09-12,Globex Inc,2000,QuickHaul
+

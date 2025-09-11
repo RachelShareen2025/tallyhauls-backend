@@ -71,19 +71,23 @@ export async function uploadInvoiceFile(file) {
       return normalizedRow;
     });
 
-    // 5️⃣ Map CSV rows to Supabase table format + flagged reason
-    const invoiceRows = rows.map((row) => {
+    // 5️⃣ Map CSV rows to Supabase table format + validation
+    const invoiceRows = rows.map((row, i) => {
+      const loadNumber = getCsvValue(row, csvMap.load_number)?.trim();
+      if (!loadNumber) {
+        throw new Error(`Missing load_number in CSV at row ${i + 1}`);
+      }
+
       const totalCharge = parseFloat(getCsvValue(row, csvMap.total_charge)) || 0;
-      const carrierPay = totalCharge * 0.75; // default 75%
-      const today = new Date();
+      const carrierPay = parseFloat((totalCharge * 0.75).toFixed(2)); // default 75%
       const billDateRaw = getCsvValue(row, csvMap.bill_date);
       const billDate = billDateRaw ? new Date(billDateRaw) : null;
-
       const shipperTerms = 30; // Net 30
       const carrierTerms = 15; // Net 15
+      const today = new Date();
 
-      const shipperDue = billDate ? new Date(billDate.getTime() + shipperTerms*24*60*60*1000) : null;
-      const carrierDue = billDate ? new Date(billDate.getTime() + carrierTerms*24*60*60*1000) : null;
+      const shipperDue = billDate ? new Date(billDate.getTime() + shipperTerms * 24*60*60*1000) : null;
+      const carrierDue = billDate ? new Date(billDate.getTime() + carrierTerms * 24*60*60*1000) : null;
 
       // Auto-flagging only if unpaid (initial CSV import, both are false)
       let flaggedReason = null;
@@ -91,14 +95,14 @@ export async function uploadInvoiceFile(file) {
       else if (carrierDue && carrierDue < today) flaggedReason = "Past Due – Carrier";
 
       return {
-        load_number: getCsvValue(row, csvMap.load_number)?.trim(),
+        load_number: loadNumber,
         bill_date: billDateRaw,
         shipper: getCsvValue(row, csvMap.shipper)?.trim(),
         total_charge: parseFloat(totalCharge.toFixed(2)),
         shipper_terms: "Net 30",
         shipper_paid: false,
         carrier: getCsvValue(row, csvMap.carrier)?.trim(),
-        carrier_pay: parseFloat(carrierPay.toFixed(2)),
+        carrier_pay: carrierPay,
         carrier_terms: "Net 15",
         carrier_paid: false,
         flagged_reason: flaggedReason,
@@ -106,7 +110,6 @@ export async function uploadInvoiceFile(file) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-
     });
 
     // 6️⃣ Insert rows into Supabase
@@ -122,7 +125,7 @@ export async function uploadInvoiceFile(file) {
     console.log("✅ All rows inserted successfully!");
     return { success: true, fileUrl };
   } catch (err) {
-    console.error("🔥 Unexpected error:", err);
+    console.error("🔥 Upload failed:", err.message);
     return { success: false, error: err.message };
   }
 }
