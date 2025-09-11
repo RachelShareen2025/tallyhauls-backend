@@ -198,14 +198,16 @@ export default function Dashboard() {
 
                 {/* Shipper Details */}
                 <th>Shipper</th>
+                <th>Load Rate ($)</th>   {/* amount first */}
                 <th>Shipper Terms</th>
                 <th>Shipper Paid</th>
 
                 {/* Carrier Details */}
                 <th>Carrier</th>
+                <th>Carrier Pay ($)</th> {/* amount first */}
                 <th>Carrier Terms</th>
-                <th>Carrier Pay</th>
                 <th>Carrier Paid</th>
+
 
                 {/* Results */}
                 <th>Net Cash</th>

@@ -1,6 +1,25 @@
 import { supabase } from "../supabaseClient";
 import Papa from "papaparse";
 
+// Normalize headers: lowercase + trim spaces
+const normalizeHeader = (header) => header?.trim().toLowerCase();
+
+// Alias mapping (all lowercase for normalization)
+const csvMap = {
+  load_number: ["load id", "load #", "loadnumber", "loadnum", "loadno"],
+  total_charge: ["total charge", "rate", "load rate", "amount", "rate$", "charge"],
+  bill_date: ["bill date", "invoice date", "date"],
+  shipper: ["shipper", "customer", "client", "shipper name"],
+  carrier: ["carrier", "trucking company", "transporter", "carrier name"]
+};
+
+const getCsvValue = (row, aliases) => {
+  for (let a of aliases) {
+    if (row[a] !== undefined && row[a] !== "") return row[a];
+  }
+  return null;
+};
+
 export async function uploadInvoiceFile(file) {
   try {
     if (!file) {
@@ -12,8 +31,6 @@ export async function uploadInvoiceFile(file) {
 
     // 1️⃣ Upload file to Supabase Storage
     const filePath = `invoices/${Date.now()}_${file.name}`;
-    console.log("Uploading file to path:", filePath);
-
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("invoices")
       .upload(filePath, file);
@@ -23,10 +40,8 @@ export async function uploadInvoiceFile(file) {
       return { success: false, error: uploadError.message };
     }
 
-    console.log("✅ File uploaded successfully:", uploadData);
-
     // 2️⃣ Get public URL
-    const { data: publicUrlData, error: publicUrlError } = supabase.storage
+    const { data: publicUrlData, error: publicUrlError } = await supabase.storage
       .from("invoices")
       .getPublicUrl(uploadData.path);
 
@@ -36,47 +51,65 @@ export async function uploadInvoiceFile(file) {
     }
 
     const fileUrl = publicUrlData.publicUrl;
-    console.log("🔗 Public file URL:", fileUrl);
 
-    // 3️⃣ Parse CSV file
+    // 3️⃣ Parse CSV
     const csvText = await file.text();
-    const parsed = Papa.parse(csvText, {
-      header: true,
-      skipEmptyLines: true,
-    });
-
-    const rows = parsed.data;
-    console.log("📊 Parsed CSV rows:", rows);
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    let rows = parsed.data;
 
     if (!rows || rows.length === 0) {
-      console.warn("⚠️ CSV is empty or headers don't match expected format.");
+      console.warn("⚠️ CSV is empty or invalid.");
       return { success: false, error: "CSV is empty or invalid" };
     }
 
-    // 4️⃣ Map CSV rows to match Supabase table schema
-    const invoiceRows = rows.map((row) => {
-      const totalCharge = parseFloat(row["Total Charge"]) || 0;
-      const carrierPay = totalCharge * 0.75; // default 75%
-
-      return {
-        load_id: row["Load ID"] || null,
-        bill_date: row["Bill Date"] || null,
-        shipper: row["Shipper"] || null,
-        carrier: row["Carrier"] || null,
-        total_charge: totalCharge,
-        shipper_terms: "Net 30", // default
-        carrier_terms: "Net 15", // default
-        carrier_pay: carrierPay,
-        shipper_paid: false,
-        carrier_paid: false,
-        flagged_reason: null,
-        file_url: fileUrl,
-      };
+    // 4️⃣ Normalize headers for each row
+    rows = rows.map(row => {
+      const normalizedRow = {};
+      for (let key in row) {
+        normalizedRow[normalizeHeader(key)] = row[key];
+      }
+      return normalizedRow;
     });
 
-    console.log("💾 Rows to insert into DB:", invoiceRows);
+    // 5️⃣ Map CSV rows to Supabase table format + flagged reason
+    const invoiceRows = rows.map((row) => {
+      const totalCharge = parseFloat(getCsvValue(row, csvMap.total_charge)) || 0;
+      const carrierPay = totalCharge * 0.75; // default 75%
+      const today = new Date();
+      const billDateRaw = getCsvValue(row, csvMap.bill_date);
+      const billDate = billDateRaw ? new Date(billDateRaw) : null;
 
-    // 5️⃣ Insert all invoice rows into Supabase
+      const shipperTerms = 30; // Net 30
+      const carrierTerms = 15; // Net 15
+
+      const shipperDue = billDate ? new Date(billDate.getTime() + shipperTerms*24*60*60*1000) : null;
+      const carrierDue = billDate ? new Date(billDate.getTime() + carrierTerms*24*60*60*1000) : null;
+
+      // Auto-flagging only if unpaid (initial CSV import, both are false)
+      let flaggedReason = null;
+      if (shipperDue && shipperDue < today) flaggedReason = "Past Due – Shipper";
+      else if (carrierDue && carrierDue < today) flaggedReason = "Past Due – Carrier";
+
+      return {
+        load_number: getCsvValue(row, csvMap.load_number)?.trim(),
+        bill_date: billDateRaw,
+        shipper: getCsvValue(row, csvMap.shipper)?.trim(),
+        total_charge: parseFloat(totalCharge.toFixed(2)),
+        shipper_terms: "Net 30",
+        shipper_paid: false,
+        carrier: getCsvValue(row, csvMap.carrier)?.trim(),
+        carrier_pay: parseFloat(carrierPay.toFixed(2)),
+        carrier_terms: "Net 15",
+        carrier_paid: false,
+        flagged_reason: flaggedReason,
+        file_url: fileUrl,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+    });
+
+    // 6️⃣ Insert rows into Supabase
     const { error: insertError } = await supabase
       .from("invoices")
       .insert(invoiceRows);
@@ -87,7 +120,6 @@ export async function uploadInvoiceFile(file) {
     }
 
     console.log("✅ All rows inserted successfully!");
-
     return { success: true, fileUrl };
   } catch (err) {
     console.error("🔥 Unexpected error:", err);
