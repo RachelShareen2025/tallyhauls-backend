@@ -67,14 +67,15 @@
   display: flex;
   gap: 20px;
   padding: 0 24px;
-  margin-bottom: 24px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
 }
 
 .kpi-range-btns {
   display: flex;
   gap: 8px;
-  margin-bottom: 8px;
+  padding: 0 24px;
+  margin-bottom: 16px;
 }
 
 .kpi-range-btns button {
@@ -153,7 +154,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
-  min-width: 1200px;
+  min-width: 1400px;
 }
 .data-table th, .data-table td {
   padding: 10px;
@@ -230,31 +231,12 @@
   text-align: center;
 }
 
-.data-table th:nth-child(1),
-.data-table th:nth-child(2),
-.data-table th:nth-child(3) {
-  border-right: 2px solid #eee; /* Load Details */
-}
-
-.data-table th:nth-child(4),
-.data-table th:nth-child(5),
-.data-table th:nth-child(6),
-.data-table th:nth-child(7) {
-  border-right: 2px solid #eee; /* Shipper Details */
-}
-
-.data-table th:nth-child(8),
-.data-table th:nth-child(9),
-.data-table th:nth-child(10),
-.data-table th:nth-child(11),
-.data-table th:nth-child(12) {
-  border-right: 2px solid #eee; /* Carrier Details */
-}
-
-.data-table th:nth-child(13),
-.data-table th:nth-child(14),
-.data-table th:nth-child(15),
-.data-table th:nth-child(16),
-.data-table th:nth-child(17) {
-  border-right: none; /* Results */
-}
+/* Column Group Borders */
+.data-table th.load-group,
+.data-table td.load-group { border-right: 2px solid #eee; }
+.data-table th.shipper-group,
+.data-table td.shipper-group { border-right: 2px solid #eee; }
+.data-table th.carrier-group,
+.data-table td.carrier-group { border-right: 2px solid #eee; }
+.data-table th.results-group,
+.data-table td.results-group { border-right: none; }
