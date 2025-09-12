@@ -10,11 +10,11 @@ export default function Dashboard() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [kpiRange, setKpiRange] = useState(30); // Default 30 days
-  const [uploadStatus, setUploadStatus] = useState(null); // NEW
+  const [kpiRange, setKpiRange] = useState(30);
+  const [uploadStatus, setUploadStatus] = useState(null);
   const invoiceInputRef = useRef(null);
 
-  // Fetch invoices from Supabase
+  // Fetch invoices
   const fetchInvoices = async () => {
     setLoading(true);
     try {
@@ -50,7 +50,7 @@ export default function Dashboard() {
     window.location.href = "/";
   };
 
-  // Upload invoice handler (UPDATED)
+  // Upload invoices
   const handleInvoiceUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -65,11 +65,10 @@ export default function Dashboard() {
       setUploadStatus(`❌ Upload failed: ${result.error}`);
     }
 
-    // Clear file input to allow re-upload of same file
     if (invoiceInputRef.current) invoiceInputRef.current.value = "";
   };
 
-  // KPI calculation helper
+  // KPI calculation
   const computeKPIs = (rangeDays = kpiRange) => {
     const now = new Date();
     const cutoffDate = new Date(now.setDate(now.getDate() + rangeDays));
@@ -87,16 +86,25 @@ export default function Dashboard() {
       .filter(inv => !inv.carrier_paid)
       .reduce((sum, inv) => sum + Number(inv.carrier_pay || 0), 0);
 
-    const netCashFlow = totalReceivables - totalPayables;
+    const actualNet = totalReceivables - totalPayables;
+
+    // Projected net (assume all unpaid will be paid on due)
+    const projectedReceivables = filteredInvoices.reduce(
+      (sum, inv) => sum + Number(inv.total_charge || 0), 0
+    );
+    const projectedPayables = filteredInvoices.reduce(
+      (sum, inv) => sum + Number(inv.carrier_pay || 0), 0
+    );
+    const projectedNet = projectedReceivables - projectedPayables;
 
     const overdueAmount = filteredInvoices
       .filter(inv => {
         const today = new Date();
         const shipperDue = inv.bill_date && inv.shipper_terms
-          ? new Date(new Date(inv.bill_date).getTime() + inv.shipper_terms * 24*60*60*1000)
+          ? new Date(new Date(inv.bill_date).getTime() + inv.shipper_terms * 86400000)
           : null;
         const carrierDue = inv.bill_date && inv.carrier_terms
-          ? new Date(new Date(inv.bill_date).getTime() + inv.carrier_terms * 24*60*60*1000)
+          ? new Date(new Date(inv.bill_date).getTime() + inv.carrier_terms * 86400000)
           : null;
 
         return (!inv.shipper_paid && shipperDue && shipperDue < today) ||
@@ -104,17 +112,17 @@ export default function Dashboard() {
       })
       .reduce((sum, inv) => sum + Number(inv.total_charge || 0), 0);
 
-    return { netCashFlow, totalReceivables, totalPayables, overdueAmount };
+    return { actualNet, projectedNet, totalReceivables, totalPayables, overdueAmount };
   };
 
-  const { netCashFlow, totalReceivables, totalPayables, overdueAmount } = computeKPIs();
+  const { actualNet, projectedNet, totalReceivables, totalPayables, overdueAmount } = computeKPIs();
 
-  // Table search filtering
+  // Search filter
   const filteredInvoices = invoices.filter(inv =>
     JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Editable update (in-table editing)
+  // Editable field update
   const handleFieldChange = async (id, field, value) => {
     try {
       await supabase.from("invoices").update({ [field]: value }).eq("id", id);
@@ -132,17 +140,13 @@ export default function Dashboard() {
           <img src="/logo.png" alt="TallyHauls Logo" className="logo" />
         </div>
         <nav className="dashboard-nav">
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </nav>
       </header>
 
-      {showBanner && (
-        <div className="secure-banner">You are securely logged in.</div>
-      )}
+      {showBanner && <div className="secure-banner">You are securely logged in.</div>}
 
-      {/* KPI Bar with 30/60/90 filter */}
+      {/* KPI Bar */}
       <div className="kpi-bar">
         {["30", "60", "90"].map(d => (
           <button
@@ -154,16 +158,18 @@ export default function Dashboard() {
           </button>
         ))}
         <div className="kpi-card">
-          <div className="kpi-top"><span className="dot dot-green"></span> Net Cash Flow</div>
-          <div className="kpi-value">${netCashFlow.toFixed(2)}</div>
+          <div className="kpi-top"><span className="dot dot-blue"></span> Projected Net</div>
+          <div className="kpi-value">${projectedNet.toFixed(2)}</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-top"><span className="dot dot-green"></span> Actual Net</div>
+          <div className={`kpi-value ${actualNet < 0 ? "negative-text" : ""}`}>
+            ${actualNet.toFixed(2)}
+          </div>
         </div>
         <div className="kpi-card">
           <div className="kpi-top"><span className="dot dot-amber"></span> Total Receivables</div>
           <div className="kpi-value">${totalReceivables.toFixed(2)}</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-top"><span className="dot dot-blue"></span> Total Payables</div>
-          <div className="kpi-value">${totalPayables.toFixed(2)}</div>
         </div>
         <div className="kpi-card">
           <div className="kpi-top"><span className="dot dot-red"></span> Overdue Amount</div>
@@ -171,7 +177,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Upload + Actions */}
+      {/* Quick Actions */}
       <div className="quick-actions horizontal">
         <input
           type="file"
@@ -182,9 +188,7 @@ export default function Dashboard() {
         <button className="qa-btn" onClick={() => invoiceInputRef.current && invoiceInputRef.current.click()}>
           Upload Invoices
         </button>
-        <button className="qa-btn" onClick={generateReports}>
-          Generate Reports
-        </button>
+        <button className="qa-btn" onClick={generateReports}>Generate Reports</button>
         <input
           type="text"
           placeholder="Search invoices..."
@@ -194,14 +198,11 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Upload status */}
       {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
 
-      {/* Invoices Table */}
+      {/* Table */}
       <div className="card" style={{ margin: "0 24px 24px" }}>
-        <div className="card-head table-head">
-          <h3>Invoices</h3>
-        </div>
+        <div className="card-head table-head"><h3>Invoices</h3></div>
         <div className="table-wrap">
           <table className="data-table">
             <thead>
@@ -217,6 +218,7 @@ export default function Dashboard() {
                 <th>Carrier Terms</th>
                 <th>Carrier Paid</th>
                 <th>Net Cash</th>
+                <th>Projected Net</th>
                 <th>Flagged Reason</th>
                 <th>File</th>
               </tr>
@@ -224,21 +226,25 @@ export default function Dashboard() {
             <tbody>
               {filteredInvoices.length === 0 && (
                 <tr>
-                  <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
+                  <td colSpan="14" style={{ textAlign: "center", padding: "16px" }}>
                     No invoices uploaded yet.
                   </td>
                 </tr>
               )}
               {filteredInvoices.map(inv => {
                 const loadCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
+                const projectedLoadCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
+                const rowClass = loadCash < 0 ? "row-negative" : (inv.flagged_reason ? "row-flagged" : "");
+
                 return (
-                  <tr key={inv.id} className={inv.flagged_reason ? "row-flagged" : ""}>
+                  <tr key={inv.id} className={rowClass}>
                     <td>{inv.load_number || "—"}</td>
                     <td>{inv.bill_date ? new Date(inv.bill_date).toLocaleDateString() : "—"}</td>
                     <td>{inv.shipper}</td>
                     <td>{inv.total_charge?.toFixed(2) || "0.00"}</td>
                     <td>
                       <input
+                        className="oval-input"
                         type="text"
                         value={inv.shipper_terms || ""}
                         onChange={(e) => handleFieldChange(inv.id, "shipper_terms", e.target.value)}
@@ -254,6 +260,7 @@ export default function Dashboard() {
                     <td>{inv.carrier}</td>
                     <td>
                       <input
+                        className="oval-input"
                         type="number"
                         value={inv.carrier_pay || 0}
                         onChange={(e) => handleFieldChange(inv.id, "carrier_pay", e.target.value)}
@@ -261,6 +268,7 @@ export default function Dashboard() {
                     </td>
                     <td>
                       <input
+                        className="oval-input"
                         type="text"
                         value={inv.carrier_terms || ""}
                         onChange={(e) => handleFieldChange(inv.id, "carrier_terms", e.target.value)}
@@ -273,7 +281,8 @@ export default function Dashboard() {
                         onChange={(e) => handleFieldChange(inv.id, "carrier_paid", e.target.checked)}
                       />
                     </td>
-                    <td>${loadCash.toFixed(2)}</td>
+                    <td className="actual-net">${loadCash.toFixed(2)}</td>
+                    <td>${projectedLoadCash.toFixed(2)}</td>
                     <td>{inv.flagged_reason || "—"}</td>
                     <td>
                       {inv.file_url ? (
@@ -288,9 +297,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <footer className="dash-footer">
-        © 2025 TallyHauls – All Rights Reserved
-      </footer>
+      <footer className="dash-footer">© 2025 TallyHauls – All Rights Reserved</footer>
     </div>
   );
 }
