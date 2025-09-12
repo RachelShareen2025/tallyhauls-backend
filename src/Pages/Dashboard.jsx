@@ -86,16 +86,7 @@ export default function Dashboard() {
       .filter(inv => !inv.carrier_paid)
       .reduce((sum, inv) => sum + Number(inv.carrier_pay || 0), 0);
 
-    const actualNet = totalReceivables - totalPayables;
-
-    // Projected net (assume all unpaid will be paid on due)
-    const projectedReceivables = filteredInvoices.reduce(
-      (sum, inv) => sum + Number(inv.total_charge || 0), 0
-    );
-    const projectedPayables = filteredInvoices.reduce(
-      (sum, inv) => sum + Number(inv.carrier_pay || 0), 0
-    );
-    const projectedNet = projectedReceivables - projectedPayables;
+    const netCashFlow = totalReceivables - totalPayables;
 
     const overdueAmount = filteredInvoices
       .filter(inv => {
@@ -112,10 +103,10 @@ export default function Dashboard() {
       })
       .reduce((sum, inv) => sum + Number(inv.total_charge || 0), 0);
 
-    return { actualNet, projectedNet, totalReceivables, totalPayables, overdueAmount };
+    return { netCashFlow, totalReceivables, totalPayables, overdueAmount };
   };
 
-  const { actualNet, projectedNet, totalReceivables, totalPayables, overdueAmount } = computeKPIs();
+  const { netCashFlow, totalReceivables, totalPayables, overdueAmount } = computeKPIs();
 
   // Search filter
   const filteredInvoices = invoices.filter(inv =>
@@ -130,6 +121,14 @@ export default function Dashboard() {
     } catch (err) {
       console.error("Error updating field:", err);
     }
+  };
+
+  // Helper to compute due date
+  const computeDueDate = (billDate, terms) => {
+    if (!billDate || !terms) return "";
+    const due = new Date(billDate);
+    due.setDate(due.getDate() + Number(terms));
+    return due.toLocaleDateString();
   };
 
   return (
@@ -158,18 +157,16 @@ export default function Dashboard() {
           </button>
         ))}
         <div className="kpi-card">
-          <div className="kpi-top"><span className="dot dot-blue"></span> Projected Net</div>
-          <div className="kpi-value">${projectedNet.toFixed(2)}</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-top"><span className="dot dot-green"></span> Actual Net</div>
-          <div className={`kpi-value ${actualNet < 0 ? "negative-text" : ""}`}>
-            ${actualNet.toFixed(2)}
-          </div>
+          <div className="kpi-top"><span className="dot dot-green"></span> Net Cash Flow</div>
+          <div className="kpi-value">${netCashFlow.toFixed(2)}</div>
         </div>
         <div className="kpi-card">
           <div className="kpi-top"><span className="dot dot-amber"></span> Total Receivables</div>
           <div className="kpi-value">${totalReceivables.toFixed(2)}</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-top"><span className="dot dot-blue"></span> Total Payables</div>
+          <div className="kpi-value">${totalPayables.toFixed(2)}</div>
         </div>
         <div className="kpi-card">
           <div className="kpi-top"><span className="dot dot-red"></span> Overdue Amount</div>
@@ -218,7 +215,6 @@ export default function Dashboard() {
                 <th>Carrier Terms</th>
                 <th>Carrier Paid</th>
                 <th>Net Cash</th>
-                <th>Projected Net</th>
                 <th>Flagged Reason</th>
                 <th>File</th>
               </tr>
@@ -226,29 +222,33 @@ export default function Dashboard() {
             <tbody>
               {filteredInvoices.length === 0 && (
                 <tr>
-                  <td colSpan="14" style={{ textAlign: "center", padding: "16px" }}>
+                  <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
                     No invoices uploaded yet.
                   </td>
                 </tr>
               )}
               {filteredInvoices.map(inv => {
                 const loadCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
-                const projectedLoadCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
-                const rowClass = loadCash < 0 ? "row-negative" : (inv.flagged_reason ? "row-flagged" : "");
-
                 return (
-                  <tr key={inv.id} className={rowClass}>
+                  <tr key={inv.id} className={inv.flagged_reason ? "row-flagged" : ""}>
                     <td>{inv.load_number || "—"}</td>
                     <td>{inv.bill_date ? new Date(inv.bill_date).toLocaleDateString() : "—"}</td>
                     <td>{inv.shipper}</td>
                     <td>{inv.total_charge?.toFixed(2) || "0.00"}</td>
+                    {/* Shipper Terms: dual pill */}
                     <td>
-                      <input
-                        className="oval-input"
-                        type="text"
-                        value={inv.shipper_terms || ""}
-                        onChange={(e) => handleFieldChange(inv.id, "shipper_terms", e.target.value)}
-                      />
+                      <div className="terms-cell">
+                        <input
+                          className="oval-input"
+                          type="text"
+                          value={inv.shipper_terms || ""}
+                          onChange={(e) => handleFieldChange(inv.id, "shipper_terms", e.target.value)}
+                          placeholder="Net 15"
+                        />
+                        <div className="due-date">
+                          {computeDueDate(inv.bill_date, inv.shipper_terms)}
+                        </div>
+                      </div>
                     </td>
                     <td>
                       <input
@@ -266,13 +266,20 @@ export default function Dashboard() {
                         onChange={(e) => handleFieldChange(inv.id, "carrier_pay", e.target.value)}
                       />
                     </td>
+                    {/* Carrier Terms: dual pill */}
                     <td>
-                      <input
-                        className="oval-input"
-                        type="text"
-                        value={inv.carrier_terms || ""}
-                        onChange={(e) => handleFieldChange(inv.id, "carrier_terms", e.target.value)}
-                      />
+                      <div className="terms-cell">
+                        <input
+                          className="oval-input"
+                          type="text"
+                          value={inv.carrier_terms || ""}
+                          onChange={(e) => handleFieldChange(inv.id, "carrier_terms", e.target.value)}
+                          placeholder="Net 30"
+                        />
+                        <div className="due-date">
+                          {computeDueDate(inv.bill_date, inv.carrier_terms)}
+                        </div>
+                      </div>
                     </td>
                     <td>
                       <input
@@ -281,8 +288,7 @@ export default function Dashboard() {
                         onChange={(e) => handleFieldChange(inv.id, "carrier_paid", e.target.checked)}
                       />
                     </td>
-                    <td className="actual-net">${loadCash.toFixed(2)}</td>
-                    <td>${projectedLoadCash.toFixed(2)}</td>
+                    <td>${loadCash.toFixed(2)}</td>
                     <td>{inv.flagged_reason || "—"}</td>
                     <td>
                       {inv.file_url ? (
