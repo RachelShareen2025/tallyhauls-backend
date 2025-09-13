@@ -45,20 +45,20 @@
 
 /* Logout Button */
 .logout-btn {
-  padding: 10px 20px !important;
-  border: none !important;
-  border-radius: var(--radius) !important;
-  background-color: var(--brand-accent) !important;
-  color: #fff !important;
-  font-weight: 600 !important;
-  font-size: 0.95rem !important;
-  cursor: pointer !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-  transition: background 0.2s ease, transform 0.1s ease !important;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius);
+  background-color: var(--brand-accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 .logout-btn:hover {
-  background-color: #2fb487 !important;
-  transform: translateY(-1px) !important;
+  background-color: #2fb487;
+  transform: translateY(-1px);
 }
 
 /* Secure Banner */
@@ -151,41 +151,8 @@
 .data-table th { text-align: center; color: var(--muted); font-weight: 500; }
 .data-table td.numeric { text-align: right; }
 
-/* Editable Inputs */
-.data-table input[type="number"],
-.data-table input[type="text"],
-.data-table input[type="date"] {
-  padding: 4px 6px;
-  border-radius: 20px;
-  border: 1px solid #ddd;
-  font-size: 0.85rem;
-  text-align: center;
-  min-width: 80px;
-  transition: none; /* faster typing */
-}
-
-.data-table input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
-
-/* Terms Cell */
-.terms-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.terms-cell .oval-input { min-width: 70px; }
-.terms-cell .due-date {
-  background: #d0f0e6;
-  color: #22c55e;
-  padding: 2px 6px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  text-align: center;
-  min-width: 70px;
-}
-
 /* Flagged Row */
-.row-flagged { background: #ffeaea !important; }
+.row-flagged { background: #ffeaea; }
 
 /* Quick Actions + Search */
 .quick-actions { display: flex; gap: 16px; flex-wrap: wrap; padding: 16px 24px; }

@@ -1,145 +1,20 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import "./Dashboard.css";
-import { supabase } from "../supabaseClient";
-import { uploadInvoiceFile } from "../features/uploadInvoiceFile";
-import { generateReports } from "../features/generateReports";
 
 export default function Dashboard() {
   const [showBanner, setShowBanner] = useState(true);
-  const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [kpiRange, setKpiRange] = useState(30);
-  const [uploadStatus, setUploadStatus] = useState(null);
-  const invoiceInputRef = useRef(null);
 
-  // Fetch invoices
-  const fetchInvoices = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("invoices")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      setInvoices(data || []);
-    } catch (err) {
-      console.error("Error fetching invoices:", err.message);
-    } finally {
-      setLoading(false);
-    }
+  // Placeholder data (to be wired later)
+  const invoices = []; // Replace with processed invoices from features
+  const kpis = {
+    netCashFlow: 0,
+    totalReceivables: 0,
+    totalPayables: 0,
+    overdueAmount: 0,
   };
-
-  // On mount: auth + fetch
-  useEffect(() => {
-    const fetchUserAndData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        window.location.href = "/";
-      } else {
-        await fetchInvoices();
-      }
-    };
-    fetchUserAndData();
-  }, []);
-
-  // Logout
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/";
-  };
-
-  // Upload invoices
-  const handleInvoiceUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setUploadStatus("Uploading...");
-    const result = await uploadInvoiceFile(file);
-
-    if (result.success) {
-      setUploadStatus("✅ Uploaded successfully!");
-      await fetchInvoices();
-    } else {
-      setUploadStatus(`❌ Upload failed: ${result.error}`);
-    }
-
-    if (invoiceInputRef.current) invoiceInputRef.current.value = "";
-  };
-
-  // Editable Field Updates (Local state first for fast typing)
-  const handleFieldChange = (id, field, value) => {
-    setInvoices((prev) =>
-      prev.map((inv) => (inv.id === id ? { ...inv, [field]: value } : inv))
-    );
-  };
-
-  const handleFieldBlur = async (id, field, value) => {
-    try {
-      await supabase.from("invoices").update({ [field]: value }).eq("id", id);
-      await fetchInvoices();
-    } catch (err) {
-      console.error("Error updating field:", err);
-    }
-  };
-
-  // Compute due date safely
-  const computeDueDate = (billDate, terms) => {
-    const date = new Date(billDate);
-    if (isNaN(date) || !terms) return "";
-    date.setDate(date.getDate() + Number(terms));
-    return date.toLocaleDateString();
-  };
-
-  // KPI Calculation
-  const computeKPIs = (rangeDays = kpiRange) => {
-    const now = new Date();
-    const cutoffDate = new Date(now.getTime() + rangeDays * 86400000);
-
-    const filteredInvoices = invoices.filter((inv) => {
-      const billDate = inv.bill_date ? new Date(inv.bill_date) : null;
-      return billDate && billDate <= cutoffDate;
-    });
-
-    const totalReceivables = filteredInvoices
-      .filter((inv) => !inv.shipper_paid)
-      .reduce((sum, inv) => sum + Number(inv.total_charge || 0), 0);
-
-    const totalPayables = filteredInvoices
-      .filter((inv) => !inv.carrier_paid)
-      .reduce((sum, inv) => sum + Number(inv.carrier_pay || 0), 0);
-
-    const netCashFlow = totalReceivables - totalPayables;
-
-    const overdueAmount = filteredInvoices
-      .filter((inv) => {
-        const today = new Date();
-        const shipperDue =
-          inv.bill_date && inv.shipper_terms
-            ? new Date(new Date(inv.bill_date).getTime() + inv.shipper_terms * 86400000)
-            : null;
-        const carrierDue =
-          inv.bill_date && inv.carrier_terms
-            ? new Date(new Date(inv.bill_date).getTime() + inv.carrier_terms * 86400000)
-            : null;
-
-        return (
-          (!inv.shipper_paid && shipperDue && shipperDue < today) ||
-          (!inv.carrier_paid && carrierDue && carrierDue < today)
-        );
-      })
-      .reduce((sum, inv) => sum + Number(inv.total_charge || 0), 0);
-
-    return { netCashFlow, totalReceivables, totalPayables, overdueAmount };
-  };
-
-  const { netCashFlow, totalReceivables, totalPayables, overdueAmount } = computeKPIs();
-
-  // Filtered invoices
-  const filteredInvoices = invoices.filter((inv) =>
-    JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <div className="dashboard-container">
@@ -149,9 +24,7 @@ export default function Dashboard() {
           <img src="/logo.png" alt="TallyHauls Logo" className="logo" />
         </div>
         <nav className="dashboard-nav">
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
+          <button className="logout-btn">Logout</button>
         </nav>
       </header>
 
@@ -168,48 +41,42 @@ export default function Dashboard() {
             {d} Days
           </button>
         ))}
+
         <div className="kpi-card">
           <div className="kpi-top">
             <span className="dot dot-green"></span> Net Cash Flow
           </div>
-          <div className={`kpi-value ${netCashFlow < 0 ? "negative" : ""}`}>
-            ${netCashFlow.toFixed(2)}
+          <div className={`kpi-value ${kpis.netCashFlow < 0 ? "negative" : ""}`}>
+            ${kpis.netCashFlow.toFixed(2)}
           </div>
         </div>
+
         <div className="kpi-card">
           <div className="kpi-top">
             <span className="dot dot-amber"></span> Total Receivables
           </div>
-          <div className="kpi-value">${totalReceivables.toFixed(2)}</div>
+          <div className="kpi-value">${kpis.totalReceivables.toFixed(2)}</div>
         </div>
+
         <div className="kpi-card">
           <div className="kpi-top">
             <span className="dot dot-blue"></span> Total Payables
           </div>
-          <div className="kpi-value">${totalPayables.toFixed(2)}</div>
+          <div className="kpi-value">${kpis.totalPayables.toFixed(2)}</div>
         </div>
+
         <div className="kpi-card">
           <div className="kpi-top">
             <span className="dot dot-red"></span> Overdue Amount
           </div>
-          <div className="kpi-value">${overdueAmount.toFixed(2)}</div>
+          <div className="kpi-value">${kpis.overdueAmount.toFixed(2)}</div>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div className="quick-actions horizontal">
-        <input
-          type="file"
-          ref={invoiceInputRef}
-          style={{ display: "none" }}
-          onChange={handleInvoiceUpload}
-        />
-        <button className="qa-btn" onClick={() => invoiceInputRef.current?.click()}>
-          Upload Invoices
-        </button>
-        <button className="qa-btn" onClick={generateReports}>
-          Generate Reports
-        </button>
+        <button className="qa-btn">Upload Invoices</button>
+        <button className="qa-btn">Generate Reports</button>
         <input
           type="text"
           placeholder="Search invoices..."
@@ -218,8 +85,6 @@ export default function Dashboard() {
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
-
-      {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
 
       {/* Table */}
       <div className="card" style={{ margin: "0 24px 24px" }}>
@@ -246,101 +111,31 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {filteredInvoices.length === 0 && (
+              {invoices.length === 0 && (
                 <tr>
                   <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
                     No invoices uploaded yet.
                   </td>
                 </tr>
               )}
-              {filteredInvoices.map((inv) => {
-                const loadCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
-                return (
-                  <tr key={inv.id} className={inv.flagged_reason ? "row-flagged" : ""}>
-                    <td>{inv.load_number || "—"}</td>
-                    <td>{inv.bill_date ? new Date(inv.bill_date).toLocaleDateString() : "—"}</td>
-                    <td>{inv.shipper}</td>
-                    <td className="numeric">{Number(inv.total_charge || 0).toFixed(2)}</td>
 
-                    {/* Shipper Terms */}
-                    <td>
-                      <div className="terms-cell">
-                        <input
-                          className="oval-input"
-                          type="text"
-                          value={inv.shipper_terms || ""}
-                          onChange={(e) =>
-                            handleFieldChange(inv.id, "shipper_terms", e.target.value)
-                          }
-                          onBlur={(e) =>
-                            handleFieldBlur(inv.id, "shipper_terms", e.target.value)
-                          }
-                        />
-                        <div className="due-date">{computeDueDate(inv.bill_date, inv.shipper_terms)}</div>
-                      </div>
-                    </td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={inv.shipper_paid || false}
-                        onChange={(e) => handleFieldChange(inv.id, "shipper_paid", e.target.checked)}
-                        onBlur={(e) => handleFieldBlur(inv.id, "shipper_paid", e.target.checked)}
-                      />
-                    </td>
-
-                    <td>{inv.carrier}</td>
-                    <td>
-                      <input
-                        className="oval-input"
-                        type="number"
-                        value={inv.carrier_pay || 0}
-                        onChange={(e) =>
-                          handleFieldChange(inv.id, "carrier_pay", e.target.value)
-                        }
-                        onBlur={(e) => handleFieldBlur(inv.id, "carrier_pay", e.target.value)}
-                      />
-                    </td>
-
-                    {/* Carrier Terms */}
-                    <td>
-                      <div className="terms-cell">
-                        <input
-                          className="oval-input"
-                          type="text"
-                          value={inv.carrier_terms || ""}
-                          onChange={(e) =>
-                            handleFieldChange(inv.id, "carrier_terms", e.target.value)
-                          }
-                          onBlur={(e) =>
-                            handleFieldBlur(inv.id, "carrier_terms", e.target.value)
-                          }
-                        />
-                        <div className="due-date">{computeDueDate(inv.bill_date, inv.carrier_terms)}</div>
-                      </div>
-                    </td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={inv.carrier_paid || false}
-                        onChange={(e) => handleFieldChange(inv.id, "carrier_paid", e.target.checked)}
-                        onBlur={(e) => handleFieldBlur(inv.id, "carrier_paid", e.target.checked)}
-                      />
-                    </td>
-
-                    <td className="numeric">${loadCash.toFixed(2)}</td>
-                    <td>{inv.flagged_reason || "—"}</td>
-                    <td>
-                      {inv.file_url ? (
-                        <a href={inv.file_url} target="_blank" rel="noreferrer">
-                          View
-                        </a>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              {invoices.map((inv) => (
+                <tr key={inv.id} className={inv.flagged_reason ? "row-flagged" : ""}>
+                  <td>{inv.load_number || "—"}</td>
+                  <td>{inv.bill_date || "—"}</td>
+                  <td>{inv.shipper || "—"}</td>
+                  <td className="numeric">{inv.total_charge || 0}</td>
+                  <td>{inv.shipper_terms || "—"}</td>
+                  <td>{inv.shipper_paid ? "✔" : "—"}</td>
+                  <td>{inv.carrier || "—"}</td>
+                  <td className="numeric">{inv.carrier_pay || 0}</td>
+                  <td>{inv.carrier_terms || "—"}</td>
+                  <td>{inv.carrier_paid ? "✔" : "—"}</td>
+                  <td className="numeric">{inv.netCash || 0}</td>
+                  <td>{inv.flagged_reason || "—"}</td>
+                  <td>{inv.file_url ? <a href={inv.file_url}>View</a> : "—"}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
