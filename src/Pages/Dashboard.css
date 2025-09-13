@@ -43,22 +43,31 @@
   gap: 16px;
 }
 
-/* Logout Button */
+/* Logout Button: Force brand accent green everywhere */
 .logout-btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: var(--radius);
-  background-color: var(--brand-accent);
-  color: #fff;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  transition: background 0.2s ease, transform 0.1s ease;
+  padding: 10px 20px !important;
+  border: none !important;
+  border-radius: var(--radius) !important;
+  background-color: var(--brand-accent) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  transition: background 0.2s ease, transform 0.1s ease !important;
+  -webkit-appearance: none !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
-.logout-btn:hover {
-  background-color: #2fb487;
-  transform: translateY(-1px);
+
+.logout-btn:hover,
+.logout-btn:focus,
+.logout-btn:active,
+.logout-btn:visited {
+  background-color: var(--brand-accent) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  outline: none !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
 }
 
 /* Secure Banner */
@@ -88,9 +97,12 @@
   cursor: pointer;
   font-weight: 600;
   font-size: 0.9rem;
+  transition: background 0.2s ease, color 0.2s ease;
 }
-.kpi-range-btn:hover {
-  background: #2fb487;
+.kpi-range-btn:hover,
+.kpi-range-btn:focus,
+.kpi-range-btn:active {
+  background: var(--brand-accent);
   color: #fff;
 }
 .kpi-range-btn.active {
@@ -165,9 +177,15 @@
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
+  transition: background 0.2s ease;
 }
-.qa-btn:hover { background: #2fb487; }
+.qa-btn:hover,
+.qa-btn:focus,
+.qa-btn:active {
+  background: #2fb487;
+}
 
+/* Search */
 .search-bar {
   padding: 10px 12px;
   border-radius: var(--radius);
