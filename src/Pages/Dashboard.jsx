@@ -65,14 +65,6 @@ export default function Dashboard() {
     if (invoiceInputRef.current) invoiceInputRef.current.value = "";
   };
 
-  // Compute due date safely
-  const computeDueDate = (billDate, terms) => {
-    const date = new Date(billDate);
-    if (isNaN(date) || !terms) return "";
-    date.setDate(date.getDate() + Number(terms));
-    return date.toLocaleDateString();
-  };
-
   // Compute KPIs
   const computeKPIs = () => {
     let totalReceivables = 0;
@@ -90,12 +82,10 @@ export default function Dashboard() {
 
       projectedCashFlow += !inv.shipper_paid ? totalCharge - carrierPay : 0;
 
-      // Actual Cash Flow counts only fully paid loads
       if (inv.shipper_paid && inv.carrier_paid) {
         actualCashFlow += totalCharge - carrierPay;
       }
 
-      // Overdue
       const today = new Date();
       const shipperDue = inv.bill_date && inv.shipper_terms
         ? new Date(new Date(inv.bill_date).getTime() + inv.shipper_terms * 86400000)
