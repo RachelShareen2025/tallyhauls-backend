@@ -1,22 +1,31 @@
 // src/features/uploadFileToStorage.js
 import { supabase } from "../supabaseClient";
 
-export async function uploadFileToStorage(file) {
-  if (!file) {
-    console.error("No file provided to uploadFileToStorage.");
-    return { success: false, error: "No file provided" };
+/**
+ * Uploads a file to Supabase storage under broker-specific folder.
+ * @param {File} file - The CSV file
+ * @param {string} brokerEmail - Email of the broker
+ * @param {boolean} [isFailed=false] - Whether this is a failed CSV
+ * @returns {Promise<{success: boolean, fileUrl?: string, error?: string}>}
+ */
+export async function uploadFileToStorage(file, brokerEmail, isFailed = false) {
+  if (!file || !brokerEmail) {
+    return { success: false, error: "File or broker email missing" };
   }
 
   try {
-    const filePath = `invoices/${Date.now()}_${file.name}`;
+    const safeEmail = brokerEmail.replace(/[@.]/g, "_"); // sanitize for path
+    const folder = isFailed ? "failed_csvs" : "invoices";
+    const filePath = `${folder}/${safeEmail}/${Date.now()}_${file.name}`;
+
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from("invoices")
+      .from(folder)
       .upload(filePath, file);
 
     if (uploadError) throw uploadError;
 
     const { data: publicUrlData, error: publicUrlError } = await supabase.storage
-      .from("invoices")
+      .from(folder)
       .getPublicUrl(uploadData.path);
 
     if (publicUrlError) throw publicUrlError;

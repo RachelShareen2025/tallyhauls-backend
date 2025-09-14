@@ -1,48 +1,37 @@
 // src/Components/Dashboard.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabaseClient";
-import { computeKPIs } from "../features/calcNetCash";
-
-// New components
-import NetCashSummary from "./NetCashSummary";
 import InvoiceTable from "./InvoiceTable";
 import UploadCSV from "./UploadCSV";
 import Filters from "./Filters";
 
-export default function Dashboard() {
+const Dashboard = () => {
   const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const invoiceInputRef = useRef(null);
 
   // Fetch invoices
   const fetchInvoices = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("invoices")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      setInvoices(data || []);
-    } catch (err) {
-      console.error("Error fetching invoices:", err.message);
-    } finally {
-      setLoading(false);
-    }
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) console.error("Error fetching invoices:", error);
+    else setInvoices(data || []);
   };
 
-  // On mount: auth + fetch
+  // On mount: get user email and fetch invoices
   useEffect(() => {
-    const fetchUserAndData = async () => {
+    const fetchUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        window.location.href = "/";
-      } else {
+      if (!session?.user) window.location.href = "/";
+      else {
+        setUserEmail(session.user.email);
         await fetchInvoices();
       }
     };
-    fetchUserAndData();
+    fetchUser();
   }, []);
 
   // Logout
@@ -51,56 +40,35 @@ export default function Dashboard() {
     window.location.href = "/";
   };
 
-  // Upload invoices (passed to UploadCSV component)
+  // Handle invoice upload (trigger refresh after upload)
   const handleInvoiceUpload = async (file) => {
-    if (!file) return;
-    setLoading(true);
-    try {
-      const { success, error, fileUrl } = await import("../features/uploadInvoiceFile")
-        .then(mod => mod.uploadInvoiceFile(file));
-
-      if (!success) {
-        alert(`❌ Upload failed: ${error}`);
-      } else {
-        await fetchInvoices();
-      }
-    } catch (err) {
-      console.error("Upload error:", err.message);
-    } finally {
-      setLoading(false);
-      if (invoiceInputRef.current) invoiceInputRef.current.value = "";
-    }
+    await fetchInvoices();
   };
 
-  const kpis = computeKPIs(invoices);
-
   return (
-    <div className="dashboard-container">
-      {/* Header */}
-      <header className="dashboard-header">
-        <div className="brand">
-          <img src="/logo.png" alt="TallyHauls Logo" className="logo" />
-        </div>
-        <nav className="dashboard-nav">
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
+    <div className="dashboard-container p-4">
+      <header className="dashboard-header flex justify-between items-center mb-4">
+        <img src="/logo.png" alt="TallyHauls" className="logo h-10" />
+        <button
+          className="bg-red-500 text-white px-3 py-1 rounded"
+          onClick={handleLogout}
+        >
+          Logout
+        </button>
       </header>
 
-      {/* KPI Bar */}
-      <NetCashSummary kpis={kpis} />
-
-      {/* Quick Actions */}
-      <div className="quick-actions horizontal">
-        <UploadCSV onUpload={handleInvoiceUpload} ref={invoiceInputRef} />
+      <div className="quick-actions flex gap-4 mb-4">
+        <UploadCSV
+          onUpload={handleInvoiceUpload}
+          brokerEmail={userEmail}
+          ref={invoiceInputRef}
+        />
         <Filters searchQuery={searchQuery} onChange={setSearchQuery} />
       </div>
 
-      {/* Invoice Table */}
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
-
-      <footer className="dash-footer">© 2025 TallyHauls – All Rights Reserved</footer>
     </div>
   );
-}
+};
+
+export default Dashboard;

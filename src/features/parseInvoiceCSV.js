@@ -8,7 +8,8 @@ const csvMap = {
   total_charge: ["total charge", "rate", "load rate", "amount", "rate$", "charge"],
   bill_date: ["bill date", "invoice date", "date"],
   shipper: ["shipper", "customer", "client", "shipper name"],
-  carrier: ["carrier", "trucking company", "transporter", "carrier name"]
+  carrier: ["carrier", "trucking company", "transporter", "carrier name"],
+  carrier_pay: ["carrier pay", "carrier amount", "carrier rate", "carrier$", "carrier_charge"] // 👈 NEW
 };
 
 const getCsvValue = (row, aliases) => {
@@ -26,7 +27,7 @@ export function parseInvoiceCSV(fileText) {
     throw new Error("CSV is empty or invalid.");
   }
 
-  rows = rows.map(row => {
+  rows = rows.map((row) => {
     const normalizedRow = {};
     for (let key in row) normalizedRow[normalizeHeader(key)] = row[key];
     return normalizedRow;
@@ -38,15 +39,16 @@ export function parseInvoiceCSV(fileText) {
     if (!loadNumber) throw new Error(`Missing load_number in CSV at row ${i + 1}`);
 
     const totalCharge = parseFloat(getCsvValue(row, csvMap.total_charge)) || 0;
-    const carrierPay = parseFloat((totalCharge * 0.75).toFixed(2)); // default 75%
+    const carrierPay = parseFloat(getCsvValue(row, csvMap.carrier_pay)) || 0; // 👈 extracted from CSV
+
     const billDateRaw = getCsvValue(row, csvMap.bill_date);
     const shipperTerms = 30; // Net 30
     const carrierTerms = 15; // Net 15
     const today = new Date();
 
     const billDate = billDateRaw ? new Date(billDateRaw) : null;
-    const shipperDue = billDate ? new Date(billDate.getTime() + shipperTerms * 24*60*60*1000) : null;
-    const carrierDue = billDate ? new Date(billDate.getTime() + carrierTerms * 24*60*60*1000) : null;
+    const shipperDue = billDate ? new Date(billDate.getTime() + shipperTerms * 86400000) : null;
+    const carrierDue = billDate ? new Date(billDate.getTime() + carrierTerms * 86400000) : null;
 
     let flaggedReason = null;
     if (shipperDue && shipperDue < today) flaggedReason = "Past Due – Shipper";
@@ -60,7 +62,7 @@ export function parseInvoiceCSV(fileText) {
       shipper_terms: "Net 30",
       shipper_paid: false,
       carrier: getCsvValue(row, csvMap.carrier)?.trim(),
-      carrier_pay: carrierPay,
+      carrier_pay: parseFloat(carrierPay.toFixed(2)), // 👈 final value
       carrier_terms: "Net 15",
       carrier_paid: false,
       flagged_reason: flaggedReason,

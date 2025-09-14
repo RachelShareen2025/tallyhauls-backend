@@ -56,9 +56,8 @@ export default function InvoiceTable({ invoices, searchQuery }) {
                     <input type="checkbox" checked={inv.shipper_paid || false} readOnly />
                   </td>
                   <td>{inv.carrier}</td>
-                  <td>
-                    <input type="number" value={inv.carrier_pay || 0} readOnly />
-                  </td>
+                  {/* Carrier Pay → text only (non-editable) */}
+                  <td className="numeric">{Number(inv.carrier_pay || 0).toFixed(2)}</td>
                   <td>{inv.carrier_terms || "Net 15"}</td>
                   <td>
                     <input type="checkbox" checked={inv.carrier_paid || false} readOnly />

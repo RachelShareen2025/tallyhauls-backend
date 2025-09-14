@@ -1,42 +1,39 @@
-// src/Components/UploadCSV.jsx
-import React, { useRef, useState } from "react";
-import { uploadInvoiceFile } from "../features/uploadInvoiceFile";
-import "../Pages/Dashboard.css"; // reuse existing styles
+// src/features/uploadInvoiceFile.js
+import { uploadFileToStorage } from "./uploadFileToStorage";
+import { parseInvoiceCSV } from "./parseInvoiceCSV";
+import { insertInvoices } from "./insertInvoices";
 
-export default function UploadCSV({ onUpload }) {
-  const fileInputRef = useRef(null);
-  const [status, setStatus] = useState(null);
+/**
+ * Upload CSV, parse, and insert invoices for a specific broker
+ * @param {File} file
+ * @param {string} brokerEmail
+ */
+export async function uploadInvoiceFile(file, brokerEmail) {
+  if (!brokerEmail) return { success: false, error: "Broker email required" };
 
-  const handleFileChange = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+  try {
+    // 1️⃣ Upload original CSV to storage
+    const storageRes = await uploadFileToStorage(file, brokerEmail);
+    if (!storageRes.success) return storageRes;
 
-    setStatus("Uploading...");
-    const result = await uploadInvoiceFile(file);
-
-    if (result.success) {
-      setStatus("✅ Uploaded successfully!");
-      if (onUpload) onUpload(result.fileUrl);
-    } else {
-      setStatus(`❌ Upload failed: ${result.error}`);
+    // 2️⃣ Parse CSV
+    const fileText = await file.text();
+    let parsedRows;
+    try {
+      parsedRows = parseInvoiceCSV(fileText);
+    } catch (err) {
+      // If parsing fails, store file in a separate 'failed_csvs' folder for this broker
+      await uploadFileToStorage(file, brokerEmail, true); // true = failed folder
+      return { success: false, error: `CSV parsing failed: ${err.message}` };
     }
 
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+    // 3️⃣ Insert into DB
+    const dbRes = await insertInvoices(parsedRows, storageRes.fileUrl);
+    if (!dbRes.success) return dbRes;
 
-  return (
-    <div className="quick-actions horizontal">
-      <input
-        type="file"
-        ref={fileInputRef}
-        style={{ display: "none" }}
-        onChange={handleFileChange}
-        accept=".csv"
-      />
-      <button className="qa-btn" onClick={() => fileInputRef.current?.click()}>
-        Upload CSV
-      </button>
-      {status && <div className="upload-status">{status}</div>}
-    </div>
-  );
+    return { success: true, fileUrl: storageRes.fileUrl };
+  } catch (err) {
+    console.error("🔥 Upload failed:", err.message);
+    return { success: false, error: err.message };
+  }
 }
