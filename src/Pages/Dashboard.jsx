@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import "./Dashboard.css";
 import { supabase } from "../supabaseClient";
 import { uploadInvoiceFile } from "../features/uploadInvoiceFile";
+import { computeKPIs } from "../features/cashFlowCalculations"; // ✅ NEW import
 
 export default function Dashboard() {
   const [invoices, setInvoices] = useState([]);
@@ -65,47 +66,9 @@ export default function Dashboard() {
     if (invoiceInputRef.current) invoiceInputRef.current.value = "";
   };
 
-  // Compute KPIs
-  const computeKPIs = () => {
-    let totalReceivables = 0;
-    let totalPayables = 0;
-    let projectedCashFlow = 0;
-    let actualCashFlow = 0;
-    let overdueAmount = 0;
-
-    invoices.forEach((inv) => {
-      const totalCharge = Number(inv.total_charge || 0);
-      const carrierPay = Number(inv.carrier_pay || 0);
-
-      totalReceivables += !inv.shipper_paid ? totalCharge : 0;
-      totalPayables += !inv.carrier_paid ? carrierPay : 0;
-
-      projectedCashFlow += !inv.shipper_paid ? totalCharge - carrierPay : 0;
-
-      if (inv.shipper_paid && inv.carrier_paid) {
-        actualCashFlow += totalCharge - carrierPay;
-      }
-
-      const today = new Date();
-      const shipperDue = inv.bill_date && inv.shipper_terms
-        ? new Date(new Date(inv.bill_date).getTime() + inv.shipper_terms * 86400000)
-        : null;
-      const carrierDue = inv.bill_date && inv.carrier_terms
-        ? new Date(new Date(inv.bill_date).getTime() + inv.carrier_terms * 86400000)
-        : null;
-
-      if (
-        (!inv.shipper_paid && shipperDue && shipperDue < today) ||
-        (!inv.carrier_paid && carrierDue && carrierDue < today)
-      ) {
-        overdueAmount += totalCharge;
-      }
-    });
-
-    return { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, overdueAmount };
-  };
-
-  const { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, overdueAmount } = computeKPIs();
+  // ✅ Use external KPI calculator instead of inline logic
+  const { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, overdueAmount } =
+    computeKPIs(invoices);
 
   // Filtered invoices
   const filteredInvoices = invoices.filter((inv) =>
@@ -223,7 +186,8 @@ export default function Dashboard() {
                 </tr>
               )}
               {filteredInvoices.map((inv) => {
-                const loadCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
+                const loadCash =
+                  Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
                 return (
                   <tr key={inv.id} className={inv.flagged_reason ? "row-flagged" : ""}>
                     <td>{inv.load_number || "—"}</td>
@@ -249,7 +213,9 @@ export default function Dashboard() {
                         <a href={inv.file_url} target="_blank" rel="noreferrer">
                           View
                         </a>
-                      ) : "—"}
+                      ) : (
+                        "—"
+                      )}
                     </td>
                   </tr>
                 );
