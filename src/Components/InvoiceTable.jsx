@@ -52,54 +52,36 @@ export default function InvoiceTable({ invoices, searchQuery }) {
             )}
 
             {filteredInvoices.map((inv) => {
-              const netCash =
-                Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
+              const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
 
               // Bill date
               const billDate = inv.bill_date ? new Date(inv.bill_date) : null;
 
               // Shipper Terms → Net 30 + due date
-              const shipperTerms = `Net 30 - ${
-                billDate ? formatDueDate(billDate, 30) : "—"
-              }`;
+              const shipperTermsWithDue = billDate
+                ? `Net 30 - ${formatDueDate(billDate, 30)}`
+                : "Net 30 - —";
 
               // Carrier Terms → Net 15 + due date
-              const carrierTerms = `Net 15 - ${
-                billDate ? formatDueDate(billDate, 15) : "—"
-              }`;
+              const carrierTermsWithDue = billDate
+                ? `Net 15 - ${formatDueDate(billDate, 15)}`
+                : "Net 15 - —";
 
               return (
-                <tr
-                  key={inv.id}
-                  className={inv.flagged_reason ? "row-flagged" : ""}
-                >
+                <tr key={inv.id} className={inv.flagged_reason ? "row-flagged" : ""}>
                   <td>{inv.load_number || "—"}</td>
-                  <td>
-                    {billDate ? billDate.toLocaleDateString() : "—"}
-                  </td>
+                  <td>{billDate ? billDate.toLocaleDateString() : "—"}</td>
                   <td>{inv.shipper}</td>
-                  <td className="numeric">
-                    {Number(inv.total_charge || 0).toFixed(2)}
-                  </td>
-                  <td>{shipperTerms}</td>
+                  <td className="numeric">{Number(inv.total_charge || 0).toFixed(2)}</td>
+                  <td>{shipperTermsWithDue}</td>
                   <td>
-                    <input
-                      type="checkbox"
-                      checked={inv.shipper_paid || false}
-                      readOnly
-                    />
+                    <input type="checkbox" checked={inv.shipper_paid || false} readOnly />
                   </td>
                   <td>{inv.carrier}</td>
-                  <td className="numeric">
-                    {Number(inv.carrier_pay || 0).toFixed(2)}
-                  </td>
-                  <td>{carrierTerms}</td>
+                  <td className="numeric">{Number(inv.carrier_pay || 0).toFixed(2)}</td>
+                  <td>{carrierTermsWithDue}</td>
                   <td>
-                    <input
-                      type="checkbox"
-                      checked={inv.carrier_paid || false}
-                      readOnly
-                    />
+                    <input type="checkbox" checked={inv.carrier_paid || false} readOnly />
                   </td>
                   <td className="numeric">${netCash.toFixed(2)}</td>
                   <td>{inv.flagged_reason || "—"}</td>
