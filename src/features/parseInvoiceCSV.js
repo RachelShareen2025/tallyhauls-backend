@@ -33,7 +33,6 @@ export function parseInvoiceCSV(fileText) {
     return normalizedRow;
   });
 
-  // Map rows for database
   const invoiceRows = rows.map((row, i) => {
     const loadNumber = getCsvValue(row, csvMap.load_number)?.trim();
     if (!loadNumber) throw new Error(`Missing load_number in CSV at row ${i + 1}`);
@@ -41,14 +40,17 @@ export function parseInvoiceCSV(fileText) {
     const totalCharge = parseFloat(getCsvValue(row, csvMap.total_charge)) || 0;
     const carrierPay = parseFloat(getCsvValue(row, csvMap.carrier_pay)) || 0;
 
+    // ✅ Always store bill_date as YYYY-MM-DD
     const billDateRaw = getCsvValue(row, csvMap.bill_date);
-    const shipperTerms = 30; // Net 30
-    const carrierTerms = 15; // Net 15
-    const today = new Date();
-
     const billDate = billDateRaw ? new Date(billDateRaw) : null;
-    const shipperDue = billDate ? new Date(billDate.getTime() + shipperTerms * 86400000) : null;
-    const carrierDue = billDate ? new Date(billDate.getTime() + carrierTerms * 86400000) : null;
+    const billDateFormatted = billDate ? billDate.toISOString().split("T")[0] : null;
+
+    const today = new Date();
+    const shipperTermsDays = 30;
+    const carrierTermsDays = 15;
+
+    const shipperDue = billDate ? new Date(billDate.getTime() + shipperTermsDays * 86400000) : null;
+    const carrierDue = billDate ? new Date(billDate.getTime() + carrierTermsDays * 86400000) : null;
 
     let flaggedReason = null;
     if (shipperDue && shipperDue < today) flaggedReason = "Past Due – Shipper";
@@ -56,20 +58,19 @@ export function parseInvoiceCSV(fileText) {
 
     return {
       load_number: loadNumber,
-      bill_date: billDateRaw,
+      bill_date: billDateFormatted,
       shipper: getCsvValue(row, csvMap.shipper)?.trim(),
       total_charge: parseFloat(totalCharge.toFixed(2)),
       shipper_terms: "Net 30",
-      shipper_due_date: shipperDue ? shipperDue.toISOString().split("T")[0] : null, // 👈 added
       shipper_paid: false,
       carrier: getCsvValue(row, csvMap.carrier)?.trim(),
       carrier_pay: parseFloat(carrierPay.toFixed(2)),
       carrier_terms: "Net 15",
-      carrier_due_date: carrierDue ? carrierDue.toISOString().split("T")[0] : null, // 👈 added
       carrier_paid: false,
       flagged_reason: flaggedReason,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      file_url: row.file_url || null
     };
   });
 

@@ -11,24 +11,36 @@ const Dashboard = () => {
   const [userEmail, setUserEmail] = useState("");
   const invoiceInputRef = useRef(null);
 
-  // Fetch invoices
+  // Fetch invoices safely
   const fetchInvoices = async () => {
-    const { data, error } = await supabase
-      .from("invoices")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) console.error("Error fetching invoices:", error);
-    else setInvoices(data || []);
+    try {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      if (data && data.length > 0) setInvoices(data);
+      // Don't overwrite invoices if fetch returns empty
+    } catch (err) {
+      console.error("Error fetching invoices:", err);
+      // Keep old invoices intact
+    }
   };
 
   // On mount: get user email and fetch invoices
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) window.location.href = "/";
-      else {
-        setUserEmail(session.user.email);
-        await fetchInvoices();
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) window.location.href = "/";
+        else {
+          setUserEmail(session.user.email);
+          await fetchInvoices();
+        }
+      } catch (err) {
+        console.error("Error getting session:", err);
+        window.location.href = "/";
       }
     };
     fetchUser();
