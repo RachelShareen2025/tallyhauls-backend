@@ -10,6 +10,14 @@ export default function InvoiceTable({ invoices, searchQuery }) {
     JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Helper: format due date
+  const formatDueDate = (billDate, days) => {
+    if (!billDate) return "—";
+    const date = new Date(billDate);
+    date.setDate(date.getDate() + days);
+    return date.toLocaleDateString();
+  };
+
   return (
     <div className="card" style={{ margin: "0 24px 24px" }}>
       <div className="card-head table-head">
@@ -44,23 +52,54 @@ export default function InvoiceTable({ invoices, searchQuery }) {
             )}
 
             {filteredInvoices.map((inv) => {
-              const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
+              const netCash =
+                Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
+
+              // Bill date
+              const billDate = inv.bill_date ? new Date(inv.bill_date) : null;
+
+              // Shipper Terms → Net 30 + due date
+              const shipperTerms = `Net 30 - ${
+                billDate ? formatDueDate(billDate, 30) : "—"
+              }`;
+
+              // Carrier Terms → Net 15 + due date
+              const carrierTerms = `Net 15 - ${
+                billDate ? formatDueDate(billDate, 15) : "—"
+              }`;
+
               return (
-                <tr key={inv.id} className={inv.flagged_reason ? "row-flagged" : ""}>
+                <tr
+                  key={inv.id}
+                  className={inv.flagged_reason ? "row-flagged" : ""}
+                >
                   <td>{inv.load_number || "—"}</td>
-                  <td>{inv.bill_date ? new Date(inv.bill_date).toLocaleDateString() : "—"}</td>
-                  <td>{inv.shipper}</td>
-                  <td className="numeric">{Number(inv.total_charge || 0).toFixed(2)}</td>
-                  <td>{inv.shipper_terms || "Net 30"}</td>
                   <td>
-                    <input type="checkbox" checked={inv.shipper_paid || false} readOnly />
+                    {billDate ? billDate.toLocaleDateString() : "—"}
+                  </td>
+                  <td>{inv.shipper}</td>
+                  <td className="numeric">
+                    {Number(inv.total_charge || 0).toFixed(2)}
+                  </td>
+                  <td>{shipperTerms}</td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={inv.shipper_paid || false}
+                      readOnly
+                    />
                   </td>
                   <td>{inv.carrier}</td>
-                  {/* Carrier Pay → text only (non-editable) */}
-                  <td className="numeric">{Number(inv.carrier_pay || 0).toFixed(2)}</td>
-                  <td>{inv.carrier_terms || "Net 15"}</td>
+                  <td className="numeric">
+                    {Number(inv.carrier_pay || 0).toFixed(2)}
+                  </td>
+                  <td>{carrierTerms}</td>
                   <td>
-                    <input type="checkbox" checked={inv.carrier_paid || false} readOnly />
+                    <input
+                      type="checkbox"
+                      checked={inv.carrier_paid || false}
+                      readOnly
+                    />
                   </td>
                   <td className="numeric">${netCash.toFixed(2)}</td>
                   <td>{inv.flagged_reason || "—"}</td>

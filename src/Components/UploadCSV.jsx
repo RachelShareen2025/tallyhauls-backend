@@ -1,9 +1,9 @@
 // src/Components/UploadCSV.jsx
 import React, { useRef, useState } from "react";
 import { uploadInvoiceFile } from "../features/uploadInvoiceFile";
-import "../Pages/Dashboard.css"; // reuse existing styles
+import "../Pages/Dashboard.css"; 
 
-export default function UploadCSV({ onUpload }) {
+export default function UploadCSV({ onUpload, brokerEmail }) {
   const fileInputRef = useRef(null);
   const [status, setStatus] = useState(null);
 
@@ -12,11 +12,11 @@ export default function UploadCSV({ onUpload }) {
     if (!file) return;
 
     setStatus("Uploading...");
-    const result = await uploadInvoiceFile(file);
+    const result = await uploadInvoiceFile(file, brokerEmail);
 
     if (result.success) {
       setStatus("✅ Uploaded successfully!");
-      if (onUpload) onUpload(result.fileUrl);
+      if (onUpload) onUpload(file);
     } else {
       setStatus(`❌ Upload failed: ${result.error}`);
     }
