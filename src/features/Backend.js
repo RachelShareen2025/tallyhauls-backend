@@ -1,9 +1,8 @@
-// src/features/Backend.js
 import { supabase } from "./supabaseClient";
 import Papa from "papaparse";
 
 /* -----------------------------
-   1️⃣ Net Cash Calculations
+   1️⃣ KPI Calculations
 ----------------------------- */
 export function calculateProjectedNetCashFlow(rows) {
   const totalCharges = rows.reduce((sum, r) => sum + (r.total_charge || 0), 0);
@@ -90,7 +89,6 @@ const getCsvValue = (row, aliases) => {
 export function parseInvoiceCSV(fileText) {
   const parsed = Papa.parse(fileText, { header: true, skipEmptyLines: true });
   let rows = parsed.data;
-
   if (!rows || rows.length === 0) throw new Error("CSV is empty or invalid.");
 
   rows = rows.map(row => {
@@ -99,39 +97,37 @@ export function parseInvoiceCSV(fileText) {
     return normalizedRow;
   });
 
-  const today = new Date();
-
   return rows.map((row, i) => {
     const loadNumber = getCsvValue(row, csvMap.load_number)?.trim();
-    const totalChargeRaw = getCsvValue(row, csvMap.total_charge);
-    const totalCharge = totalChargeRaw !== null ? parseFloat(totalChargeRaw) : 0;
+    if (!loadNumber) return { flagged_reason: "Missing load_number", ...row }; // row-level flag
 
-    const carrierPayRaw = getCsvValue(row, csvMap.carrier_pay);
-    const carrierPay = carrierPayRaw !== null ? parseFloat(carrierPayRaw) : 0;
+    const totalCharge = parseFloat(getCsvValue(row, csvMap.total_charge)) || 0;
+    const carrierPay = parseFloat(getCsvValue(row, csvMap.carrier_pay)) || 0;
 
     const billDateRaw = getCsvValue(row, csvMap.bill_date);
     const billDate = billDateRaw ? new Date(billDateRaw) : null;
     const billDateFormatted = billDate ? billDate.toISOString().split("T")[0] : null;
 
+    const shipperDue = billDate ? new Date(billDate.getTime() + 30 * 86400000) : null;
+    const carrierDue = billDate ? new Date(billDate.getTime() + 15 * 86400000) : null;
+
     let flaggedReason = null;
-    if (!loadNumber) flaggedReason = "Missing load_number";
-    else if (billDate) {
-      const shipperDue = new Date(billDate.getTime() + 30 * 86400000);
-      const carrierDue = new Date(billDate.getTime() + 15 * 86400000);
-      if (shipperDue < today) flaggedReason = "Past Due – Shipper";
-      else if (carrierDue < today) flaggedReason = "Past Due – Carrier";
-    }
+    const today = new Date();
+    if (shipperDue && shipperDue < today) flaggedReason = "Past Due – Shipper";
+    else if (carrierDue && carrierDue < today) flaggedReason = "Past Due – Carrier";
 
     return {
-      load_number: loadNumber || null,
+      load_number: loadNumber,
       bill_date: billDateFormatted,
       shipper: getCsvValue(row, csvMap.shipper)?.trim(),
       total_charge: parseFloat(totalCharge.toFixed(2)),
       shipper_terms: "Net 30",
+      shipper_due: shipperDue ? shipperDue.toISOString().split("T")[0] : null,
       shipper_paid: false,
       carrier: getCsvValue(row, csvMap.carrier)?.trim(),
       carrier_pay: parseFloat(carrierPay.toFixed(2)),
       carrier_terms: "Net 15",
+      carrier_due: carrierDue ? carrierDue.toISOString().split("T")[0] : null,
       carrier_paid: false,
       flagged_reason: flaggedReason,
       created_at: new Date().toISOString(),

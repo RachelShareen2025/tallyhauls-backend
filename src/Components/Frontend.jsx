@@ -1,8 +1,8 @@
 // src/Components/Frontend.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { supabase } from "../supabaseClient"; // <- fixed path
-import { uploadInvoiceFile, computeKPIs } from "../features/Backend"; // <- slimmed to what's used
-import "./Dashboard.css"; // CSS stays here
+import { supabase } from "../supabaseClient";
+import { uploadInvoiceFile, computeKPIs } from "../features/Backend";
+import "./Dashboard.css";
 
 export default function Frontend() {
   const [invoices, setInvoices] = useState([]);
@@ -50,7 +50,6 @@ export default function Frontend() {
 
   // ================== Components ==================
 
-  // ---------- Filters ----------
   const Filters = ({ searchQuery, onSearchChange }) => (
     <div className="quick-actions horizontal">
       <input
@@ -63,7 +62,6 @@ export default function Frontend() {
     </div>
   );
 
-  // ---------- UploadCSV ----------
   const UploadCSV = ({ onUpload, brokerEmail }) => {
     const fileInputRefInner = useRef(null);
     const [status, setStatus] = useState(null);
@@ -105,7 +103,6 @@ export default function Frontend() {
     );
   };
 
-  // ---------- NetCashSummary ----------
   const NetCashSummary = ({ kpis }) => {
     if (!kpis) return null;
     const { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, overdueAmount } = kpis;
@@ -134,7 +131,7 @@ export default function Frontend() {
     );
   };
 
-  // ---------- InvoiceTable ----------
+  // ================= Invoice Table =================
   const InvoiceTable = ({ invoices, searchQuery }) => {
     if (!invoices) return null;
 
@@ -161,11 +158,11 @@ export default function Frontend() {
                 <th>Load #</th>
                 <th>Bill Date</th>
                 <th>Shipper</th>
-                <th className="numeric">Load Rate ($)</th>
+                <th>Load Rate ($)</th>
                 <th>Shipper Terms & Due</th>
                 <th>Shipper Paid</th>
                 <th>Carrier</th>
-                <th className="numeric">Carrier Pay ($)</th>
+                <th>Carrier Pay ($)</th>
                 <th>Carrier Terms & Due</th>
                 <th>Carrier Paid</th>
                 <th className="numeric">Net Cash</th>
@@ -199,13 +196,19 @@ export default function Frontend() {
                     <td>{inv.load_number || "—"}</td>
                     <td>{billDate ? billDate.toLocaleDateString() : "—"}</td>
                     <td>{inv.shipper || "—"}</td>
-                    <td className="numeric">{Number(inv.total_charge || 0).toFixed(2)}</td>
+                    <td style={{ textAlign: "center" }}>
+                      {Number(inv.total_charge || 0).toFixed(2)}
+                    </td>
                     <td>{shipperTermsDisplay}</td>
                     <td>
                       <input type="checkbox" checked={inv.shipper_paid || false} readOnly />
                     </td>
                     <td>{inv.carrier || "—"}</td>
-                    <td className="numeric">{Number(inv.carrier_pay || 0).toFixed(2)}</td>
+                    <td style={{ textAlign: "center" }}>
+                      {inv.carrier_pay !== null && inv.carrier_pay !== undefined
+                        ? Number(inv.carrier_pay).toFixed(2)
+                        : "—"}
+                    </td>
                     <td>{carrierTermsDisplay}</td>
                     <td>
                       <input type="checkbox" checked={inv.carrier_paid || false} readOnly />
@@ -231,7 +234,6 @@ export default function Frontend() {
     );
   };
 
-  // ---------- KPI calc (derived) ----------
   const kpis = computeKPIs(invoices);
 
   // ================== Render Dashboard ==================
