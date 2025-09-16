@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Landing from "./Pages/Landing";
-import Auth from "./Pages/Auth";
-import Dashboard from "./Pages/Dashboard";
+import Landing from "./Components/Landing";
+import Auth from "./Components/Auth";
+import Dashboard from "./Components/Frontend";
 import { supabase } from "./supabaseClient";
 
 export default function App() {
