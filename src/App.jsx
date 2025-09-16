@@ -31,7 +31,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={session ? <Dashboard /> : <Auth />} />
-        <Route path="/dashboard" element={session ? <Dashboard /> : <Auth />} />
+        <Route path="/Frontend" element={session ? <Dashboard /> : <Auth />} />
         <Route path="*" element={<Landing />} />
       </Routes>
     </BrowserRouter>
