@@ -1,18 +1,7 @@
 // src/Components/Frontend.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { supabase } from "./supabaseClient"; // keep backend separate
-import { 
-  uploadInvoiceFile,
-  parseInvoiceCSV,
-  insertInvoices,
-  uploadFileToStorage,
-  calculateProjectedNetCashFlow,
-  calculateActualNetCashFlow,
-  calculateTotalReceivables,
-  calculateTotalPayables,
-  calculateOverdueAmount,
-  computeKPIs
-} from "../features/Backend";
+import { supabase } from "../supabaseClient"; // <- fixed path
+import { uploadInvoiceFile, computeKPIs } from "../features/Backend"; // <- slimmed to what's used
 import "./Dashboard.css"; // CSS stays here
 
 export default function Frontend() {
@@ -54,7 +43,7 @@ export default function Frontend() {
     window.location.href = "/";
   };
 
-  // Handle invoice upload
+  // Handle invoice upload -> refresh list after upload
   const handleInvoiceUpload = async (file) => {
     await fetchInvoices();
   };
@@ -76,7 +65,7 @@ export default function Frontend() {
 
   // ---------- UploadCSV ----------
   const UploadCSV = ({ onUpload, brokerEmail }) => {
-    const fileInputRef = useRef(null);
+    const fileInputRefInner = useRef(null);
     const [status, setStatus] = useState(null);
 
     const handleFileChange = async (event) => {
@@ -84,28 +73,31 @@ export default function Frontend() {
       if (!file) return;
 
       setStatus("Uploading...");
-      const result = await uploadInvoiceFile(file, brokerEmail);
-
-      if (result.success) {
-        setStatus("✅ Uploaded successfully!");
-        if (onUpload) onUpload(file);
-      } else {
-        setStatus(`❌ Upload failed: ${result.error}`);
+      try {
+        const result = await uploadInvoiceFile(file, brokerEmail);
+        if (result.success) {
+          setStatus("✅ Uploaded successfully!");
+          if (onUpload) onUpload(file);
+        } else {
+          setStatus(`❌ Upload failed: ${result.error}`);
+        }
+      } catch (err) {
+        setStatus(`❌ Upload failed: ${err.message}`);
       }
 
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (fileInputRefInner.current) fileInputRefInner.current.value = "";
     };
 
     return (
       <div className="quick-actions horizontal">
         <input
           type="file"
-          ref={fileInputRef}
+          ref={fileInputRefInner}
           style={{ display: "none" }}
           onChange={handleFileChange}
           accept=".csv"
         />
-        <button className="qa-btn" onClick={() => fileInputRef.current?.click()}>
+        <button className="qa-btn" onClick={() => fileInputRefInner.current?.click()}>
           Upload CSV
         </button>
         {status && <div className="upload-status">{status}</div>}
@@ -239,6 +231,9 @@ export default function Frontend() {
     );
   };
 
+  // ---------- KPI calc (derived) ----------
+  const kpis = computeKPIs(invoices);
+
   // ================== Render Dashboard ==================
   return (
     <div className="dashboard-container p-4">
@@ -250,9 +245,11 @@ export default function Frontend() {
       </header>
 
       <div className="quick-actions flex gap-4 mb-4">
-        <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} />
+        <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} ref={invoiceInputRef} />
         <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       </div>
+
+      <NetCashSummary kpis={kpis} />
 
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
     </div>

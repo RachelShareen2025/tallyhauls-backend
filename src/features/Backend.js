@@ -99,27 +99,31 @@ export function parseInvoiceCSV(fileText) {
     return normalizedRow;
   });
 
+  const today = new Date();
+
   return rows.map((row, i) => {
     const loadNumber = getCsvValue(row, csvMap.load_number)?.trim();
-    if (!loadNumber) throw new Error(`Missing load_number in CSV at row ${i + 1}`);
+    const totalChargeRaw = getCsvValue(row, csvMap.total_charge);
+    const totalCharge = totalChargeRaw !== null ? parseFloat(totalChargeRaw) : 0;
 
-    const totalCharge = parseFloat(getCsvValue(row, csvMap.total_charge)) || 0;
-    const carrierPay = parseFloat(getCsvValue(row, csvMap.carrier_pay)) || 0;
+    const carrierPayRaw = getCsvValue(row, csvMap.carrier_pay);
+    const carrierPay = carrierPayRaw !== null ? parseFloat(carrierPayRaw) : 0;
 
     const billDateRaw = getCsvValue(row, csvMap.bill_date);
     const billDate = billDateRaw ? new Date(billDateRaw) : null;
     const billDateFormatted = billDate ? billDate.toISOString().split("T")[0] : null;
 
-    const today = new Date();
-    const shipperDue = billDate ? new Date(billDate.getTime() + 30 * 86400000) : null;
-    const carrierDue = billDate ? new Date(billDate.getTime() + 15 * 86400000) : null;
-
     let flaggedReason = null;
-    if (shipperDue && shipperDue < today) flaggedReason = "Past Due – Shipper";
-    else if (carrierDue && carrierDue < today) flaggedReason = "Past Due – Carrier";
+    if (!loadNumber) flaggedReason = "Missing load_number";
+    else if (billDate) {
+      const shipperDue = new Date(billDate.getTime() + 30 * 86400000);
+      const carrierDue = new Date(billDate.getTime() + 15 * 86400000);
+      if (shipperDue < today) flaggedReason = "Past Due – Shipper";
+      else if (carrierDue < today) flaggedReason = "Past Due – Carrier";
+    }
 
     return {
-      load_number: loadNumber,
+      load_number: loadNumber || null,
       bill_date: billDateFormatted,
       shipper: getCsvValue(row, csvMap.shipper)?.trim(),
       total_charge: parseFloat(totalCharge.toFixed(2)),
