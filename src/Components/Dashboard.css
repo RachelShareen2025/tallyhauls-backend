@@ -55,12 +55,24 @@
   cursor: pointer !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
   transition: background 0.2s ease, transform 0.1s ease !important;
+  text-decoration: none !important;
+  text-align: center !important;
+  display: inline-block !important;
+  line-height: 1.2 !important;
 }
 
-.logout-btn:hover {
+.logout-btn:hover,
+.logout-btn:focus {
   background-color: #2fb487 !important;
   transform: translateY(-1px) !important;
+  outline: none !important;
 }
+
+.logout-btn:active {
+  transform: translateY(0px) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+}
+
 
 /* ---------- KPI Bar ---------- */
 .kpi-bar {

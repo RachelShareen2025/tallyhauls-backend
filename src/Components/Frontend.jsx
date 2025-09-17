@@ -217,14 +217,14 @@ export default function Frontend({ userEmail }) {
     );
   };
 
-  // Memoize KPI calculations so they don't re-run unnecessarily
+  // Memoize KPI calculations
   const kpis = useMemo(() => computeKPIs(invoices), [invoices]);
 
   return (
     <div className="dashboard-container p-4">
       <header className="dashboard-header flex justify-between items-center mb-4">
         <img src="/logo.png" alt="TallyHauls" className="logo h-10" />
-        <button className="bg-red-500 text-white px-3 py-1 rounded" onClick={handleLogout}>
+        <button className="logout-btn" onClick={handleLogout}>
           Logout
         </button>
       </header>
