@@ -16,20 +16,30 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get current session
+    let isMounted = true;
+
     const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data, error } = await supabase.auth.getSession();
+      if (!isMounted) return;
+      if (error) console.error("Session fetch error:", error);
       setSession(data.session);
       setLoading(false);
     };
+
     getSession();
 
-    // Listen for session changes
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    // Listen for session changes only when necessary
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession((prev) => {
+        if (prev?.access_token === newSession?.access_token) return prev; // no change
+        return newSession;
+      });
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) return <div>Loading...</div>;

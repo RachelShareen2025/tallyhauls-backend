@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+// src/Components/Frontend.jsx
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import { uploadInvoiceFile, computeKPIs } from "../features/Backend";
 import "./Dashboard.css";
@@ -216,7 +217,8 @@ export default function Frontend({ userEmail }) {
     );
   };
 
-  const kpis = computeKPIs(invoices);
+  // Memoize KPI calculations so they don't re-run unnecessarily
+  const kpis = useMemo(() => computeKPIs(invoices), [invoices]);
 
   return (
     <div className="dashboard-container p-4">
