@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { supabase } from "../supabaseClient"; // move up one folder
 import Papa from "papaparse";
 
 /* -----------------------------
