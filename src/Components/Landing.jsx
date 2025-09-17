@@ -15,7 +15,7 @@ export default function Landing() {
       } = await supabase.auth.getSession();
 
       if (session) {
-        window.location.href = "/dashboard"; // already logged in
+        window.location.href = "/frontend"; // FIX: redirect to valid route
       }
     };
 
@@ -25,7 +25,7 @@ export default function Landing() {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session) {
-          window.location.href = "/dashboard";
+          window.location.href = "/frontend"; // FIX: redirect to valid route
         }
       }
     );
@@ -95,11 +95,7 @@ export default function Landing() {
     <div className="landing-container">
       {/* Header */}
       <header className="landing-header">
-        <img
-          src="/logo.png"
-          alt="TallyHauls Logo"
-          className="landing-logo"
-        />
+        <img src="/logo.png" alt="TallyHauls Logo" className="landing-logo" />
         <nav className="landing-nav">
           <a href="#features">Features</a>
           <a href="#contact">Contact</a>
@@ -129,10 +125,7 @@ export default function Landing() {
           {msg && <p className="login-msg">{msg}</p>}
         </div>
         <div className="hero-right">
-          <img
-            src="/image/Dashboard.png"
-            alt="Dashboard preview"
-          />
+          <img src="/image/Dashboard.png" alt="Dashboard preview" />
         </div>
       </section>
 
@@ -155,11 +148,7 @@ export default function Landing() {
         <form className="contact-form" action="/auth">
           <input type="text" placeholder="Full Name" required />
           <input type="email" placeholder="Email Address" required />
-          <textarea
-            placeholder="How can we help you?"
-            rows="4"
-            required
-          ></textarea>
+          <textarea placeholder="How can we help you?" rows="4" required></textarea>
           <button type="submit">Get Started</button>
         </form>
       </section>
