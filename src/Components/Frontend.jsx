@@ -1,5 +1,5 @@
 // src/Components/Frontend.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "../supabaseClient";
 import { uploadInvoiceFile, computeKPIs } from "../features/Backend";
 import "./Dashboard.css";
@@ -48,8 +48,7 @@ export default function Frontend() {
     await fetchInvoices();
   };
 
-  // ================== Components ==================
-
+  // ---------- Filters ----------
   const Filters = ({ searchQuery, onSearchChange }) => (
     <div className="quick-actions horizontal">
       <input
@@ -62,6 +61,7 @@ export default function Frontend() {
     </div>
   );
 
+  // ---------- UploadCSV ----------
   const UploadCSV = ({ onUpload, brokerEmail }) => {
     const fileInputRefInner = useRef(null);
     const [status, setStatus] = useState(null);
@@ -103,6 +103,7 @@ export default function Frontend() {
     );
   };
 
+  // ---------- NetCashSummary ----------
   const NetCashSummary = ({ kpis }) => {
     if (!kpis) return null;
     const { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, overdueAmount } = kpis;
@@ -131,13 +132,13 @@ export default function Frontend() {
     );
   };
 
-  // ================= Invoice Table =================
+  // ---------- InvoiceTable ----------
   const InvoiceTable = ({ invoices, searchQuery }) => {
-    if (!invoices) return null;
-
-    const filteredInvoices = invoices.filter((inv) =>
-      JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredInvoices = useMemo(() => {
+      return invoices.filter((inv) =>
+        JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }, [invoices, searchQuery]);
 
     const formatDueDate = (billDate, days) => {
       if (!billDate) return "—";
@@ -178,7 +179,6 @@ export default function Frontend() {
                   </td>
                 </tr>
               )}
-
               {filteredInvoices.map((inv) => {
                 const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
                 const billDate = inv.bill_date ? new Date(inv.bill_date) : null;
@@ -234,7 +234,8 @@ export default function Frontend() {
     );
   };
 
-  const kpis = computeKPIs(invoices);
+  // Memoize KPIs to avoid flicker
+  const kpis = useMemo(() => computeKPIs(invoices), [invoices]);
 
   // ================== Render Dashboard ==================
   return (
