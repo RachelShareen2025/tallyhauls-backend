@@ -1,16 +1,14 @@
-// src/Components/Frontend.jsx
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import { uploadInvoiceFile, computeKPIs } from "../features/Backend";
 import "./Dashboard.css";
 
-export default function Frontend() {
+export default function Frontend({ userEmail }) {
   const [invoices, setInvoices] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const invoiceInputRef = useRef(null);
 
-  // Fetch invoices from Supabase
+  // Fetch invoices once
   const fetchInvoices = async () => {
     const { data, error } = await supabase
       .from("invoices")
@@ -21,20 +19,8 @@ export default function Frontend() {
     else setInvoices(data || []);
   };
 
-  // On mount: get user email and fetch invoices
   useEffect(() => {
-    const fetchUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.user) window.location.href = "/";
-      else {
-        setUserEmail(session.user.email);
-        await fetchInvoices();
-      }
-    };
-    fetchUser();
+    fetchInvoices();
   }, []);
 
   // Logout
@@ -48,7 +34,7 @@ export default function Frontend() {
     await fetchInvoices();
   };
 
-  // ---------- Filters ----------
+  // === Components ===
   const Filters = ({ searchQuery, onSearchChange }) => (
     <div className="quick-actions horizontal">
       <input
@@ -61,7 +47,6 @@ export default function Frontend() {
     </div>
   );
 
-  // ---------- UploadCSV ----------
   const UploadCSV = ({ onUpload, brokerEmail }) => {
     const fileInputRefInner = useRef(null);
     const [status, setStatus] = useState(null);
@@ -103,7 +88,6 @@ export default function Frontend() {
     );
   };
 
-  // ---------- NetCashSummary ----------
   const NetCashSummary = ({ kpis }) => {
     if (!kpis) return null;
     const { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, overdueAmount } = kpis;
@@ -132,13 +116,12 @@ export default function Frontend() {
     );
   };
 
-  // ---------- InvoiceTable ----------
   const InvoiceTable = ({ invoices, searchQuery }) => {
-    const filteredInvoices = useMemo(() => {
-      return invoices.filter((inv) =>
-        JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }, [invoices, searchQuery]);
+    if (!invoices) return null;
+
+    const filteredInvoices = invoices.filter((inv) =>
+      JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const formatDueDate = (billDate, days) => {
       if (!billDate) return "—";
@@ -179,6 +162,7 @@ export default function Frontend() {
                   </td>
                 </tr>
               )}
+
               {filteredInvoices.map((inv) => {
                 const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
                 const billDate = inv.bill_date ? new Date(inv.bill_date) : null;
@@ -196,9 +180,7 @@ export default function Frontend() {
                     <td>{inv.load_number || "—"}</td>
                     <td>{billDate ? billDate.toLocaleDateString() : "—"}</td>
                     <td>{inv.shipper || "—"}</td>
-                    <td style={{ textAlign: "center" }}>
-                      {Number(inv.total_charge || 0).toFixed(2)}
-                    </td>
+                    <td style={{ textAlign: "center" }}>{Number(inv.total_charge || 0).toFixed(2)}</td>
                     <td>{shipperTermsDisplay}</td>
                     <td>
                       <input type="checkbox" checked={inv.shipper_paid || false} readOnly />
@@ -234,10 +216,8 @@ export default function Frontend() {
     );
   };
 
-  // Memoize KPIs to avoid flicker
-  const kpis = useMemo(() => computeKPIs(invoices), [invoices]);
+  const kpis = computeKPIs(invoices);
 
-  // ================== Render Dashboard ==================
   return (
     <div className="dashboard-container p-4">
       <header className="dashboard-header flex justify-between items-center mb-4">
@@ -253,7 +233,6 @@ export default function Frontend() {
       </div>
 
       <NetCashSummary kpis={kpis} />
-
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
     </div>
   );
