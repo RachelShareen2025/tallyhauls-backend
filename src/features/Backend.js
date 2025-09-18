@@ -5,20 +5,23 @@ import Papa from "papaparse";
 /* -----------------------------
    1️⃣ KPI Calculations
 ----------------------------- */
+/* -----------------------------
+   1️⃣ KPI Calculations (Fixed)
+----------------------------- */
 export function calculateProjectedNetCashFlow(rows) {
-  const totalCharges = rows.reduce((sum, r) => sum + (r.total_charge || 0), 0);
-  const totalCarrierPay = rows.reduce((sum, r) => sum + (r.carrier_pay || 0), 0);
+  const totalCharges = rows.reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
+  const totalCarrierPay = rows.reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
   return parseFloat((totalCharges - totalCarrierPay).toFixed(2));
 }
 
 export function calculateActualNetCashFlow(rows) {
   const collected = rows
     .filter(r => r.shipper_paid)
-    .reduce((sum, r) => sum + (r.total_charge || 0), 0);
+    .reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
 
   const paid = rows
     .filter(r => r.carrier_paid)
-    .reduce((sum, r) => sum + (r.carrier_pay || 0), 0);
+    .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
 
   return parseFloat((collected - paid).toFixed(2));
 }
@@ -26,44 +29,30 @@ export function calculateActualNetCashFlow(rows) {
 export function calculateTotalReceivables(rows) {
   return rows
     .filter(r => !r.shipper_paid)
-    .reduce((sum, r) => sum + (r.total_charge || 0), 0);
+    .reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
 }
 
 export function calculateTotalPayables(rows) {
   return rows
     .filter(r => !r.carrier_paid)
-    .reduce((sum, r) => sum + (r.carrier_pay || 0), 0);
+    .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
 }
 
 export function calculateOverdueShipperAmount(rows) {
   const today = new Date();
-  return rows.reduce((sum, r) => {
-    if (!r.shipper_paid && r.bill_date) {
-      const billDate = new Date(r.bill_date);
-      const dueDate = new Date(billDate.getTime() + 30 * 86400000); // 30 days Net 30
-      if (today > dueDate) {
-        return sum + (parseFloat(r.total_charge) || 0);
-      }
-    }
-    return sum;
-  }, 0);
+  return rows
+    .filter(r => !r.shipper_paid && r.bill_date)
+    .filter(r => new Date(r.bill_date).getTime() + 30 * 86400000 < today.getTime())
+    .reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
 }
 
 export function calculateOverdueCarrierAmount(rows) {
   const today = new Date();
-  return rows.reduce((sum, r) => {
-    if (!r.carrier_paid && r.bill_date) {
-      const billDate = new Date(r.bill_date);
-      const dueDate = new Date(billDate.getTime() + 15 * 86400000); // 15 days Net 15
-      if (today > dueDate) {
-        return sum + (parseFloat(r.carrier_pay) || 0);
-      }
-    }
-    return sum;
-  }, 0);
+  return rows
+    .filter(r => !r.carrier_paid && r.bill_date)
+    .filter(r => new Date(r.bill_date).getTime() + 15 * 86400000 < today.getTime())
+    .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
 }
-
-
 
 export function computeKPIs(rows) {
   return {
@@ -75,6 +64,7 @@ export function computeKPIs(rows) {
     overdueCarrierAmount: calculateOverdueCarrierAmount(rows),
   };
 }
+
 
 /* -----------------------------
    2️⃣ Insert Invoices
@@ -127,11 +117,19 @@ export function parseInvoiceCSV(fileText) {
     const loadNumber = getCsvValue(row, csvMap.load_number)?.trim();
     if (!loadNumber) return { flagged_reason: "Missing load_number", ...row };
 
-    const totalCharge = parseFloat(getCsvValue(row, csvMap.total_charge)) || 0;
-    const carrierPay = parseFloat(getCsvValue(row, csvMap.carrier_pay)) || 0;
-    const billDateRaw = getCsvValue(row, csvMap.bill_date);
-    const billDate = billDateRaw ? new Date(billDateRaw) : null;
-    const billDateFormatted = billDate ? billDate.toISOString().split("T")[0] : null;
+    const parseNumber = (val) => {
+  if (!val) return 0;
+  const cleaned = String(val).replace(/[^0-9.-]+/g, ""); // removes $ signs, commas, spaces
+  return parseFloat(cleaned) || 0;
+};
+
+const totalCharge = parseNumber(getCsvValue(row, csvMap.total_charge));
+const carrierPay = parseNumber(getCsvValue(row, csvMap.carrier_pay));
+
+   const billDateRaw = getCsvValue(row, csvMap.bill_date);
+const billDate = billDateRaw ? new Date(billDateRaw) : null;
+const billDateFormatted = billDate ? billDate.toISOString().split("T")[0] : null;
+
 
     let flaggedReason = null;
     const today = new Date();

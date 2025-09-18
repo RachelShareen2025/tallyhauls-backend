@@ -123,7 +123,7 @@ else {
 
   const NetCashSummary = ({ kpis }) => {
     if (!kpis) return null;
-    const { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, overdueAmount } = kpis;
+const { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, overdueShipperAmount, overdueCarrierAmount } = kpis;
 
    const kpiList = [
   { label: "Projected Net Cash Flow", value: projectedCashFlow, dot: "green" },
