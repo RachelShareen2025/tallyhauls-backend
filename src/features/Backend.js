@@ -1,4 +1,5 @@
-import { supabase } from "../supabaseClient"; // move up one folder
+// src/features/Backend.js
+import { supabase } from "../supabaseClient";
 import Papa from "papaparse";
 
 /* -----------------------------
@@ -41,13 +42,13 @@ export function calculateOverdueAmount(rows) {
 }
 
 export function computeKPIs(rows) {
-  const projectedCashFlow = calculateProjectedNetCashFlow(rows);
-  const actualCashFlow = calculateActualNetCashFlow(rows);
-  const totalReceivables = calculateTotalReceivables(rows);
-  const totalPayables = calculateTotalPayables(rows);
-  const overdueAmount = calculateOverdueAmount(rows);
-
-  return { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, overdueAmount };
+  return {
+    projectedCashFlow: calculateProjectedNetCashFlow(rows),
+    actualCashFlow: calculateActualNetCashFlow(rows),
+    totalReceivables: calculateTotalReceivables(rows),
+    totalPayables: calculateTotalPayables(rows),
+    overdueAmount: calculateOverdueAmount(rows),
+  };
 }
 
 /* -----------------------------
@@ -68,7 +69,7 @@ export async function insertInvoices(rows, fileUrl) {
 /* -----------------------------
    3️⃣ Parse Invoice CSV
 ----------------------------- */
-const normalizeHeader = (header) => header?.trim().toLowerCase();
+const normalizeHeader = header => header?.trim().toLowerCase();
 
 const csvMap = {
   load_number: ["load id", "load #", "loadnumber", "loadnum", "loadno"],
@@ -97,24 +98,22 @@ export function parseInvoiceCSV(fileText) {
     return normalizedRow;
   });
 
-  return rows.map((row, i) => {
+  return rows.map(row => {
     const loadNumber = getCsvValue(row, csvMap.load_number)?.trim();
     if (!loadNumber) return { flagged_reason: "Missing load_number", ...row };
 
     const totalCharge = parseFloat(getCsvValue(row, csvMap.total_charge)) || 0;
     const carrierPay = parseFloat(getCsvValue(row, csvMap.carrier_pay)) || 0;
-
     const billDateRaw = getCsvValue(row, csvMap.bill_date);
     const billDate = billDateRaw ? new Date(billDateRaw) : null;
     const billDateFormatted = billDate ? billDate.toISOString().split("T")[0] : null;
 
-    const shipperDue = billDate ? new Date(billDate.getTime() + 30 * 86400000) : null;
-    const carrierDue = billDate ? new Date(billDate.getTime() + 15 * 86400000) : null;
-
     let flaggedReason = null;
     const today = new Date();
-    if (shipperDue && shipperDue < today) flaggedReason = "Past Due – Shipper";
-    else if (carrierDue && carrierDue < today) flaggedReason = "Past Due – Carrier";
+    if (billDate) {
+      if (new Date(billDate.getTime() + 30 * 86400000) < today) flaggedReason = "Past Due – Shipper";
+      else if (new Date(billDate.getTime() + 15 * 86400000) < today) flaggedReason = "Past Due – Carrier";
+    }
 
     return {
       load_number: loadNumber,
@@ -122,12 +121,12 @@ export function parseInvoiceCSV(fileText) {
       shipper: getCsvValue(row, csvMap.shipper)?.trim(),
       total_charge: parseFloat(totalCharge.toFixed(2)),
       shipper_terms: "Net 30",
-      shipper_due: shipperDue ? shipperDue.toISOString().split("T")[0] : null,
+      shipper_due: billDate ? new Date(billDate.getTime() + 30 * 86400000).toISOString().split("T")[0] : null,
       shipper_paid: false,
       carrier: getCsvValue(row, csvMap.carrier)?.trim(),
       carrier_pay: parseFloat(carrierPay.toFixed(2)),
       carrier_terms: "Net 15",
-      carrier_due: carrierDue ? carrierDue.toISOString().split("T")[0] : null,
+      carrier_due: billDate ? new Date(billDate.getTime() + 15 * 86400000).toISOString().split("T")[0] : null,
       carrier_paid: false,
       flagged_reason: flaggedReason,
       created_at: new Date().toISOString(),
@@ -142,7 +141,6 @@ export function parseInvoiceCSV(fileText) {
 ----------------------------- */
 export async function uploadFileToStorage(file, brokerEmail, isFailed = false) {
   if (!file || !brokerEmail) return { success: false, error: "File or broker email missing" };
-
   try {
     const safeEmail = brokerEmail.replace(/[@.]/g, "_");
     const folder = isFailed ? "failed_csvs" : "invoices";
@@ -170,7 +168,6 @@ export async function uploadFileToStorage(file, brokerEmail, isFailed = false) {
 ----------------------------- */
 export async function uploadInvoiceFile(file, brokerEmail) {
   if (!brokerEmail) return { success: false, error: "Broker email required" };
-
   try {
     const storageRes = await uploadFileToStorage(file, brokerEmail);
     if (!storageRes.success) return storageRes;
@@ -195,7 +192,7 @@ export async function uploadInvoiceFile(file, brokerEmail) {
 }
 
 /* -----------------------------
-   6️⃣ Update Single Invoice Paid Status
+   6️⃣ Update Invoice Status
 ----------------------------- */
 export async function updateInvoiceStatus(invoiceId, field, value) {
   try {
@@ -213,10 +210,10 @@ export async function updateInvoiceStatus(invoiceId, field, value) {
 }
 
 /* -----------------------------
-   7️⃣ Bulk Update Invoices Paid Status
+   7️⃣ Bulk Update Invoice Status
+       (For multiple IDs only)
 ----------------------------- */
 export async function bulkUpdateInvoiceStatus(invoiceIds, field, value) {
-  if (!invoiceIds || invoiceIds.length === 0) return { success: false, error: "No invoices selected" };
   try {
     const { error } = await supabase
       .from("invoices")

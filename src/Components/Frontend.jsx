@@ -4,19 +4,16 @@ import { supabase } from "../supabaseClient";
 import {
   uploadInvoiceFile,
   computeKPIs,
-  updateInvoiceStatus,
-  bulkUpdateInvoiceStatus
+  updateInvoiceStatus
 } from "../features/Backend";
 import "./Dashboard.css";
 
 export default function Frontend({ userEmail }) {
   const [invoices, setInvoices] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRows, setSelectedRows] = useState([]);
-  const [kpiStatus, setKpiStatus] = useState(null);
   const invoiceInputRef = useRef(null);
 
-  // Fetch invoices once or refresh after upload
+  // Fetch invoices
   const fetchInvoices = async () => {
     const { data, error } = await supabase
       .from("invoices")
@@ -31,15 +28,6 @@ export default function Frontend({ userEmail }) {
     fetchInvoices();
   }, []);
 
-  // KPI status feedback
-  useEffect(() => {
-    if (invoices.length) {
-      setKpiStatus("KPIs updated ✅");
-      const timer = setTimeout(() => setKpiStatus(null), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [invoices]);
-
   // Logout
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -51,14 +39,7 @@ export default function Frontend({ userEmail }) {
     await fetchInvoices();
   };
 
-  // Toggle row selection (Excel-style)
-  const toggleRowSelection = (invoiceId) => {
-    setSelectedRows((prev) =>
-      prev.includes(invoiceId) ? prev.filter((id) => id !== invoiceId) : [...prev, invoiceId]
-    );
-  };
-
-  // Single paid checkbox update
+  // Toggle single paid checkbox
   const handlePaidToggle = async (invoiceId, field, currentValue) => {
     // Optimistic UI update
     setInvoices((prev) =>
@@ -72,24 +53,6 @@ export default function Frontend({ userEmail }) {
         prev.map((inv) => (inv.id === invoiceId ? { ...inv, [field]: currentValue } : inv))
       );
       alert(`Update failed: ${res.error}`);
-    }
-  };
-
-  // Bulk paid update
-  const handleBulkPaid = async (field) => {
-    if (selectedRows.length === 0) return;
-
-    // Optimistic UI update
-    setInvoices((prev) =>
-      prev.map((inv) => (selectedRows.includes(inv.id) ? { ...inv, [field]: true } : inv))
-    );
-
-    const res = await bulkUpdateInvoiceStatus(selectedRows, field, true);
-    if (!res.success) {
-      alert(`Bulk update failed: ${res.error}`);
-      fetchInvoices(); // Refresh to correct state
-    } else {
-      setSelectedRows([]); // Clear selection
     }
   };
 
@@ -193,20 +156,11 @@ export default function Frontend({ userEmail }) {
       <div className="card" style={{ margin: "0 24px 24px" }}>
         <div className="card-head table-head flex justify-between items-center">
           <h3>Invoices</h3>
-          <div className="bulk-actions">
-            <button className="qa-btn" onClick={() => handleBulkPaid("shipper_paid")}>
-              Mark Shipper Paid
-            </button>
-            <button className="qa-btn" onClick={() => handleBulkPaid("carrier_paid")}>
-              Mark Carrier Paid
-            </button>
-          </div>
         </div>
         <div className="table-wrap">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Select</th>
                 <th>Load #</th>
                 <th>Bill Date</th>
                 <th>Shipper</th>
@@ -225,7 +179,7 @@ export default function Frontend({ userEmail }) {
             <tbody>
               {filteredInvoices.length === 0 && (
                 <tr>
-                  <td colSpan="14" style={{ textAlign: "center", padding: "16px" }}>
+                  <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
                     No invoices uploaded yet.
                   </td>
                 </tr>
@@ -236,17 +190,9 @@ export default function Frontend({ userEmail }) {
                 const billDate = inv.bill_date ? new Date(inv.bill_date) : null;
                 const shipperTermsDisplay = billDate ? `Net 30 - ${formatDueDate(billDate, 30)}` : "Net 30 - —";
                 const carrierTermsDisplay = billDate ? `Net 15 - ${formatDueDate(billDate, 15)}` : "Net 15 - —";
-                const isSelected = selectedRows.includes(inv.id);
 
                 return (
                   <tr key={inv.id} className={inv.flagged_reason ? "row-flagged" : ""}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleRowSelection(inv.id)}
-                      />
-                    </td>
                     <td>{inv.load_number || "—"}</td>
                     <td>{billDate ? billDate.toLocaleDateString() : "—"}</td>
                     <td>{inv.shipper || "—"}</td>
@@ -314,7 +260,6 @@ export default function Frontend({ userEmail }) {
       </div>
 
       <NetCashSummary kpis={kpis} />
-      {kpiStatus && <div className="upload-status">{kpiStatus}</div>}
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
     </div>
   );

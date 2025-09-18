@@ -1,13 +1,12 @@
 /* ---------- Brand Tokens ---------- */
 :root {
   --brand-text: #2d3959;
-  --brand-accent: #33c898; /* Logo green */
+  --brand-accent: #33c898;
   --bg: #f5f7fb;
   --card: #ffffff;
   --muted: #6b7280;
   --shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
   --radius: 12px;
-  --kpi-flash: #d4f8e8;
 }
 
 /* ---------- Layout ---------- */
@@ -52,17 +51,8 @@
   transition: background 0.2s ease, transform 0.1s ease;
 }
 
-.logout-btn:hover,
-.logout-btn:focus {
-  background-color: #2fb487;
-  transform: translateY(-1px);
-  outline: none;
-}
-
-.logout-btn:active {
-  transform: translateY(0px);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-}
+.logout-btn:hover { background-color: #2fb487; transform: translateY(-1px); }
+.logout-btn:active { transform: translateY(0); box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
 
 /* ---------- KPI Bar ---------- */
 .kpi-bar {
@@ -72,7 +62,6 @@
   padding: 16px 24px;
 }
 
-/* KPI Cards */
 .kpi-card {
   background: var(--card);
   box-shadow: var(--shadow);
@@ -80,19 +69,6 @@
   flex: 1 1 160px;
   padding: 16px;
   min-width: 160px;
-  transition: background 0.3s ease;
-}
-
-/* KPI flash effect */
-.kpi-card.flash {
-  background-color: var(--kpi-flash);
-  animation: flashAnim 1s ease;
-}
-
-@keyframes flashAnim {
-  0% { background-color: var(--kpi-flash); }
-  50% { background-color: var(--card); }
-  100% { background-color: var(--card); }
 }
 
 .kpi-top {
@@ -107,12 +83,9 @@
 .kpi-value {
   font-size: 1.5rem;
   font-weight: 700;
-  line-height: 1.3;
 }
 
-.kpi-value.negative {
-  color: #ef4444;
-}
+.kpi-value.negative { color: #ef4444; }
 
 /* Dots */
 .dot {
@@ -136,16 +109,13 @@
 }
 
 /* ---------- Table ---------- */
-.table-wrap {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
+.table-wrap { overflow-x: auto; }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
-  min-width: 1600px;
+  min-width: 1200px;
 }
 
 .data-table th,
@@ -154,28 +124,9 @@
   border-bottom: 1px solid #eee;
 }
 
-.data-table th {
-  text-align: center;
-  color: var(--muted);
-  font-weight: 500;
-}
+.data-table th { text-align: center; color: var(--muted); font-weight: 500; }
 
-.data-table td.numeric {
-  text-align: right;
-}
-
-/* Editable Inputs */
-.data-table input[type="number"],
-.data-table input[type="text"],
-.data-table input[type="date"] {
-  padding: 4px 6px;
-  border-radius: 20px;
-  border: 1px solid #ddd;
-  font-size: 0.85rem;
-  text-align: center;
-  min-width: 80px;
-  transition: none;
-}
+.data-table td.numeric { text-align: right; }
 
 .data-table input[type="checkbox"] {
   width: 16px;
@@ -183,33 +134,10 @@
   cursor: pointer;
 }
 
-/* Paid checkbox styling */
-input[type="checkbox"].paid-green {
-  accent-color: var(--brand-accent);
-}
-
-/* Terms Cell */
-.terms-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.terms-cell .oval-input { min-width: 70px; }
-
-.terms-cell .due-date {
-  background: #d0f0e6;
-  color: #22c55e;
-  padding: 2px 6px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  text-align: center;
-  min-width: 70px;
-}
+input[type="checkbox"].paid-green { accent-color: var(--brand-accent); }
 
 /* Flagged Row */
-.row-flagged { background: #ffeaea !important; }
+.row-flagged { background: #ffeaea; }
 
 /* Quick Actions + Search */
 .quick-actions {
@@ -228,7 +156,6 @@ input[type="checkbox"].paid-green {
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: background 0.2s ease;
 }
 
 .qa-btn:hover { background: #2fb487; }
@@ -239,25 +166,4 @@ input[type="checkbox"].paid-green {
   border: 1px solid #ccc;
   flex: 1;
   min-width: 200px;
-}
-
-/* Bulk action container */
-.bulk-actions {
-  display: flex;
-  gap: 8px;
-}
-
-/* Upload status / KPI status */
-.upload-status {
-  margin-top: 8px;
-  font-size: 0.85rem;
-  color: var(--brand-accent);
-}
-
-/* Footer */
-.dash-footer {
-  text-align: center;
-  padding: 12px;
-  color: var(--muted);
-  font-size: 0.8rem;
 }
