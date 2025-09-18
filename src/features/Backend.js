@@ -35,7 +35,7 @@ export function calculateTotalPayables(rows) {
     .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
 }
 
-// ✅ Overdue calculations using shipper_due / carrier_due
+// ✅ Overdue calculations using shipper_due / carrier_due fields
 export function calculateOverdueShipperAmount(rows) {
   const todayUTC = new Date(Date.UTC(
     new Date().getUTCFullYear(),
@@ -46,7 +46,7 @@ export function calculateOverdueShipperAmount(rows) {
   return rows.reduce((sum, r) => {
     if (!r.shipper_paid && r.shipper_due) {
       const dueUTC = new Date(r.shipper_due + "T00:00:00Z");
-      if (dueUTC < todayUTC) return sum + Number(r.total_charge || 0);
+      if (todayUTC > dueUTC) return sum + Number(r.total_charge || 0);
     }
     return sum;
   }, 0);
@@ -62,7 +62,7 @@ export function calculateOverdueCarrierAmount(rows) {
   return rows.reduce((sum, r) => {
     if (!r.carrier_paid && r.carrier_due) {
       const dueUTC = new Date(r.carrier_due + "T00:00:00Z");
-      if (dueUTC < todayUTC) return sum + Number(r.carrier_pay || 0);
+      if (todayUTC > dueUTC) return sum + Number(r.carrier_pay || 0);
     }
     return sum;
   }, 0);
@@ -120,7 +120,6 @@ export function parseInvoiceCSV(fileText) {
   let rows = parsed.data;
   if (!rows || rows.length === 0) throw new Error("CSV is empty or invalid.");
 
-  // Normalize headers
   rows = rows.map(row => {
     const normalizedRow = {};
     for (let key in row) normalizedRow[normalizeHeader(key)] = row[key];

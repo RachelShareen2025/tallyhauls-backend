@@ -32,7 +32,7 @@ export default function Frontend({ userEmail }) {
         shipper_paid: !!inv.shipper_paid,
         carrier_paid: !!inv.carrier_paid
       }));
-      setInvoices(normalizedData); // Fixed typo
+      setInvoices(normalizedData);
     }
   };
 
@@ -51,7 +51,7 @@ export default function Frontend({ userEmail }) {
     await fetchInvoices();
   };
 
-  // Toggle single paid checkbox
+  // Toggle single paid checkbox with instant KPI update
   const handlePaidToggle = async (invoiceId, field, currentValue) => {
     // Optimistic UI update
     setInvoices((prev) =>
@@ -151,120 +151,112 @@ export default function Frontend({ userEmail }) {
   };
 
   const InvoiceTable = ({ invoices, searchQuery }) => {
-  if (!invoices) return null;
+    if (!invoices) return null;
 
-  const filteredInvoices = invoices.filter((inv) =>
-    JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    const filteredInvoices = invoices.filter((inv) =>
+      JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-  const todayUTC = new Date(Date.UTC(
-    new Date().getUTCFullYear(),
-    new Date().getUTCMonth(),
-    new Date().getUTCDate()
-  ));
+    const formatDueDate = (billDate, days) => {
+      if (!billDate) return "—";
+      const date = new Date(billDate);
+      date.setUTCDate(date.getUTCDate() + days); // UTC-safe addition
+      return date.toLocaleDateString();
+    };
 
-  return (
-    <div className="card" style={{ margin: "0 24px 24px" }}>
-      <div className="card-head table-head flex justify-between items-center">
-        <h3>Invoices</h3>
-      </div>
-      <div className="table-wrap">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Load #</th>
-              <th>Bill Date</th>
-              <th>Shipper</th>
-              <th>Load Rate ($)</th>
-              <th>Shipper Terms & Due</th>
-              <th>Shipper Paid</th>
-              <th>Carrier</th>
-              <th>Carrier Pay ($)</th>
-              <th>Carrier Terms & Due</th>
-              <th>Carrier Paid</th>
-              <th className="numeric">Net Cash</th>
-              <th>Flagged Reason</th>
-              <th>File</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredInvoices.length === 0 && (
+    return (
+      <div className="card" style={{ margin: "0 24px 24px" }}>
+        <div className="card-head table-head flex justify-between items-center">
+          <h3>Invoices</h3>
+        </div>
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
-                  No invoices uploaded yet.
-                </td>
+                <th>Load #</th>
+                <th>Bill Date</th>
+                <th>Shipper</th>
+                <th>Load Rate ($)</th>
+                <th>Shipper Terms & Due</th>
+                <th>Shipper Paid</th>
+                <th>Carrier</th>
+                <th>Carrier Pay ($)</th>
+                <th>Carrier Terms & Due</th>
+                <th>Carrier Paid</th>
+                <th className="numeric">Net Cash</th>
+                <th>Flagged Reason</th>
+                <th>File</th>
               </tr>
-            )}
-
-            {filteredInvoices.map((inv) => {
-              const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
-
-              // UTC-safe due dates
-              const shipperDueDate = inv.shipper_due ? new Date(inv.shipper_due) : null;
-              const carrierDueDate = inv.carrier_due ? new Date(inv.carrier_due) : null;
-
-              const shipperTermsDisplay = shipperDueDate
-                ? `Net 30 - ${shipperDueDate.toLocaleDateString()}`
-                : "Net 30 - —";
-              const carrierTermsDisplay = carrierDueDate
-                ? `Net 15 - ${carrierDueDate.toLocaleDateString()}`
-                : "Net 15 - —";
-
-              // Overdue checks
-              const isShipperOverdue = shipperDueDate && !inv.shipper_paid && shipperDueDate < todayUTC;
-              const isCarrierOverdue = carrierDueDate && !inv.carrier_paid && carrierDueDate < todayUTC;
-
-              return (
-                <tr key={inv.id} className={isShipperOverdue || isCarrierOverdue ? "row-flagged" : ""}>
-                  <td>{inv.load_number || "—"}</td>
-                  <td>{inv.bill_date ? new Date(inv.bill_date).toLocaleDateString() : "—"}</td>
-                  <td>{inv.shipper || "—"}</td>
-                  <td style={{ textAlign: "center" }}>{Number(inv.total_charge || 0).toFixed(2)}</td>
-                  <td>{shipperTermsDisplay}</td>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={inv.shipper_paid || false}
-                      className={inv.shipper_paid ? "paid-green" : ""}
-                      onChange={() => handlePaidToggle(inv.id, "shipper_paid", inv.shipper_paid)}
-                    />
-                  </td>
-                  <td>{inv.carrier || "—"}</td>
-                  <td style={{ textAlign: "center" }}>
-                    {inv.carrier_pay !== null && inv.carrier_pay !== undefined
-                      ? Number(inv.carrier_pay).toFixed(2)
-                      : "—"}
-                  </td>
-                  <td>{carrierTermsDisplay}</td>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={inv.carrier_paid || false}
-                      className={inv.carrier_paid ? "paid-green" : ""}
-                      onChange={() => handlePaidToggle(inv.id, "carrier_paid", inv.carrier_paid)}
-                    />
-                  </td>
-                  <td className="numeric">${netCash.toFixed(2)}</td>
-                  <td>{inv.flagged_reason || (isShipperOverdue ? "Past Due – Shipper" : isCarrierOverdue ? "Past Due – Carrier" : "—")}</td>
-                  <td>
-                    {inv.file_url ? (
-                      <a href={inv.file_url} target="_blank" rel="noreferrer">
-                        View
-                      </a>
-                    ) : (
-                      "—"
-                    )}
+            </thead>
+            <tbody>
+              {filteredInvoices.length === 0 && (
+                <tr>
+                  <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
+                    No invoices uploaded yet.
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
+              )}
 
+              {filteredInvoices.map((inv) => {
+                const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
+                const billDate = inv.bill_date ? new Date(inv.bill_date) : null;
+                const shipperTermsDisplay = billDate ? `Net 30 - ${formatDueDate(billDate, 30)}` : "Net 30 - —";
+                const carrierTermsDisplay = billDate ? `Net 15 - ${formatDueDate(billDate, 15)}` : "Net 15 - —";
+
+                // New: red highlight only if invoice is overdue and not fully paid
+                const isOverdue =
+                  (inv.flagged_reason && (!inv.shipper_paid || !inv.carrier_paid)) ? "row-flagged" : "";
+
+                return (
+                  <tr key={inv.id} className={isOverdue}>
+                    <td>{inv.load_number || "—"}</td>
+                    <td>{billDate ? billDate.toLocaleDateString() : "—"}</td>
+                    <td>{inv.shipper || "—"}</td>
+                    <td style={{ textAlign: "center" }}>{Number(inv.total_charge || 0).toFixed(2)}</td>
+                    <td>{shipperTermsDisplay}</td>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={inv.shipper_paid || false}
+                        className={inv.shipper_paid ? "paid-green" : ""}
+                        onChange={() => handlePaidToggle(inv.id, "shipper_paid", inv.shipper_paid)}
+                      />
+                    </td>
+                    <td>{inv.carrier || "—"}</td>
+                    <td style={{ textAlign: "center" }}>
+                      {inv.carrier_pay !== null && inv.carrier_pay !== undefined
+                        ? Number(inv.carrier_pay).toFixed(2)
+                        : "—"}
+                    </td>
+                    <td>{carrierTermsDisplay}</td>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={inv.carrier_paid || false}
+                        className={inv.carrier_paid ? "paid-green" : ""}
+                        onChange={() => handlePaidToggle(inv.id, "carrier_paid", inv.carrier_paid)}
+                      />
+                    </td>
+                    <td className="numeric">${netCash.toFixed(2)}</td>
+                    <td>{inv.flagged_reason || "—"}</td>
+                    <td>
+                      {inv.file_url ? (
+                        <a href={inv.file_url} target="_blank" rel="noreferrer">
+                          View
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
 
   // Memoize KPI calculations
   const kpis = useMemo(() => computeKPIs(invoices), [invoices]);
@@ -279,15 +271,12 @@ export default function Frontend({ userEmail }) {
       </header>
 
       <div className="quick-actions flex items-center gap-4 mb-4">
-        {/* Upload CSV */}
         <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} ref={invoiceInputRef} />
 
-        {/* Download Report button */}
         <button className="qa-btn" onClick={() => alert("Download Report feature coming soon!")}>
           Download Report
         </button>
 
-        {/* Search invoices */}
         <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       </div>
 
