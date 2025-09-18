@@ -1,12 +1,13 @@
 /* ---------- Brand Tokens ---------- */
 :root {
   --brand-text: #2d3959;
-  --brand-accent: #33c898;
+  --brand-accent: #33c898; /* Logo green */
   --bg: #f5f7fb;
   --card: #ffffff;
   --muted: #6b7280;
   --shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
   --radius: 12px;
+  --kpi-flash: #d4f8e8;
 }
 
 /* ---------- Layout ---------- */
@@ -37,42 +38,31 @@
   height: auto;
 }
 
-.dashboard-nav {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
 /* Logout Button */
 .logout-btn {
-  padding: 10px 20px !important;
-  border: none !important;
-  border-radius: var(--radius) !important;
-  background-color: var(--brand-accent) !important;
-  color: #fff !important;
-  font-weight: 600 !important;
-  font-size: 0.95rem !important;
-  cursor: pointer !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-  transition: background 0.2s ease, transform 0.1s ease !important;
-  text-decoration: none !important;
-  text-align: center !important;
-  display: inline-block !important;
-  line-height: 1.2 !important;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius);
+  background-color: var(--brand-accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
 .logout-btn:hover,
 .logout-btn:focus {
-  background-color: #2fb487 !important;
-  transform: translateY(-1px) !important;
-  outline: none !important;
+  background-color: #2fb487;
+  transform: translateY(-1px);
+  outline: none;
 }
 
 .logout-btn:active {
-  transform: translateY(0px) !important;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+  transform: translateY(0px);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
-
 
 /* ---------- KPI Bar ---------- */
 .kpi-bar {
@@ -90,6 +80,19 @@
   flex: 1 1 160px;
   padding: 16px;
   min-width: 160px;
+  transition: background 0.3s ease;
+}
+
+/* KPI flash effect */
+.kpi-card.flash {
+  background-color: var(--kpi-flash);
+  animation: flashAnim 1s ease;
+}
+
+@keyframes flashAnim {
+  0% { background-color: var(--kpi-flash); }
+  50% { background-color: var(--card); }
+  100% { background-color: var(--card); }
 }
 
 .kpi-top {
@@ -180,6 +183,11 @@
   cursor: pointer;
 }
 
+/* Paid checkbox styling */
+input[type="checkbox"].paid-green {
+  accent-color: var(--brand-accent);
+}
+
 /* Terms Cell */
 .terms-cell {
   display: flex;
@@ -220,6 +228,7 @@
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
+  transition: background 0.2s ease;
 }
 
 .qa-btn:hover { background: #2fb487; }
@@ -230,6 +239,19 @@
   border: 1px solid #ccc;
   flex: 1;
   min-width: 200px;
+}
+
+/* Bulk action container */
+.bulk-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Upload status / KPI status */
+.upload-status {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--brand-accent);
 }
 
 /* Footer */

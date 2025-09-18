@@ -99,7 +99,7 @@ export function parseInvoiceCSV(fileText) {
 
   return rows.map((row, i) => {
     const loadNumber = getCsvValue(row, csvMap.load_number)?.trim();
-    if (!loadNumber) return { flagged_reason: "Missing load_number", ...row }; // row-level flag
+    if (!loadNumber) return { flagged_reason: "Missing load_number", ...row };
 
     const totalCharge = parseFloat(getCsvValue(row, csvMap.total_charge)) || 0;
     const carrierPay = parseFloat(getCsvValue(row, csvMap.carrier_pay)) || 0;
@@ -190,6 +190,43 @@ export async function uploadInvoiceFile(file, brokerEmail) {
     return { success: true, fileUrl: storageRes.fileUrl };
   } catch (err) {
     console.error("🔥 Upload failed:", err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+/* -----------------------------
+   6️⃣ Update Single Invoice Paid Status
+----------------------------- */
+export async function updateInvoiceStatus(invoiceId, field, value) {
+  try {
+    const { error } = await supabase
+      .from("invoices")
+      .update({ [field]: value, updated_at: new Date().toISOString() })
+      .eq("id", invoiceId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error("❌ Update failed:", err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+/* -----------------------------
+   7️⃣ Bulk Update Invoices Paid Status
+----------------------------- */
+export async function bulkUpdateInvoiceStatus(invoiceIds, field, value) {
+  if (!invoiceIds || invoiceIds.length === 0) return { success: false, error: "No invoices selected" };
+  try {
+    const { error } = await supabase
+      .from("invoices")
+      .update({ [field]: value, updated_at: new Date().toISOString() })
+      .in("id", invoiceIds);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error("❌ Bulk update failed:", err.message);
     return { success: false, error: err.message };
   }
 }
