@@ -35,20 +35,47 @@ export function calculateTotalPayables(rows) {
     .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
 }
 
+// ✅ UTC-safe overdue calculations
 export function calculateOverdueShipperAmount(rows) {
-  const today = new Date();
-  return rows
-    .filter(r => !r.shipper_paid && r.bill_date)
-    .filter(r => new Date(r.bill_date).getTime() + 30 * 86400000 < today.getTime())
-    .reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
+  const todayUTC = new Date(Date.UTC(
+    new Date().getUTCFullYear(),
+    new Date().getUTCMonth(),
+    new Date().getUTCDate()
+  ));
+
+  return rows.reduce((sum, r) => {
+    if (!r.shipper_paid && r.bill_date) {
+      const billUTC = new Date(r.bill_date + "T00:00:00Z");
+      const dueUTC = new Date(Date.UTC(
+        billUTC.getUTCFullYear(),
+        billUTC.getUTCMonth(),
+        billUTC.getUTCDate() + 30
+      ));
+      if (dueUTC < todayUTC) return sum + Number(r.total_charge || 0);
+    }
+    return sum;
+  }, 0);
 }
 
 export function calculateOverdueCarrierAmount(rows) {
-  const today = new Date();
-  return rows
-    .filter(r => !r.carrier_paid && r.bill_date)
-    .filter(r => new Date(r.bill_date).getTime() + 15 * 86400000 < today.getTime())
-    .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
+  const todayUTC = new Date(Date.UTC(
+    new Date().getUTCFullYear(),
+    new Date().getUTCMonth(),
+    new Date().getUTCDate()
+  ));
+
+  return rows.reduce((sum, r) => {
+    if (!r.carrier_paid && r.bill_date) {
+      const billUTC = new Date(r.bill_date + "T00:00:00Z");
+      const dueUTC = new Date(Date.UTC(
+        billUTC.getUTCFullYear(),
+        billUTC.getUTCMonth(),
+        billUTC.getUTCDate() + 15
+      ));
+      if (dueUTC < todayUTC) return sum + Number(r.carrier_pay || 0);
+    }
+    return sum;
+  }, 0);
 }
 
 export function computeKPIs(rows) {
@@ -117,7 +144,7 @@ export function parseInvoiceCSV(fileText) {
     // Parse numbers safely
     const parseNumber = (val) => {
       if (!val) return 0;
-      const cleaned = String(val).replace(/[^0-9.-]+/g, ""); // removes $, commas, spaces
+      const cleaned = String(val).replace(/[^0-9.-]+/g, "");
       return parseFloat(cleaned) || 0;
     };
 
@@ -133,7 +160,7 @@ export function parseInvoiceCSV(fileText) {
       const parsedDate = new Date(billDateRaw);
       if (!isNaN(parsedDate.getTime())) {
         billDateObj = parsedDate;
-        billDateFormatted = parsedDate.toISOString().split("T")[0]; // YYYY-MM-DD
+        billDateFormatted = parsedDate.toISOString().split("T")[0];
       }
     }
 

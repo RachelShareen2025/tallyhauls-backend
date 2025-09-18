@@ -21,20 +21,19 @@ export default function Frontend({ userEmail }) {
       .order("created_at", { ascending: false });
 
     if (error) console.error("Error fetching invoices:", error);
-else {
-  const normalizedData = (data || []).map(inv => ({
-  ...inv,
-  total_charge: parseFloat(inv.total_charge) || 0,
-  carrier_pay: parseFloat(inv.carrier_pay) || 0,
-  bill_date: inv.bill_date ? new Date(inv.bill_date) : null,
-  shipper_due: inv.shipper_due ? new Date(inv.shipper_due) : null,
-  carrier_due: inv.carrier_due ? new Date(inv.carrier_due) : null,
-  shipper_paid: !!inv.shipper_paid,
-  carrier_paid: !!inv.carrier_paid
-}));
-voices(normalizedData);
-}
-
+    else {
+      const normalizedData = (data || []).map(inv => ({
+        ...inv,
+        total_charge: parseFloat(inv.total_charge) || 0,
+        carrier_pay: parseFloat(inv.carrier_pay) || 0,
+        bill_date: inv.bill_date ? new Date(inv.bill_date + "T00:00:00Z") : null,
+        shipper_due: inv.shipper_due ? new Date(inv.shipper_due + "T00:00:00Z") : null,
+        carrier_due: inv.carrier_due ? new Date(inv.carrier_due + "T00:00:00Z") : null,
+        shipper_paid: !!inv.shipper_paid,
+        carrier_paid: !!inv.carrier_paid
+      }));
+      setInvoices(normalizedData); // Fixed typo
+    }
   };
 
   useEffect(() => {
@@ -125,17 +124,15 @@ voices(normalizedData);
 
   const NetCashSummary = ({ kpis }) => {
     if (!kpis) return null;
-const { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, overdueShipperAmount, overdueCarrierAmount } = kpis;
 
-   const kpiList = [
-  { label: "Projected Net Cash Flow", value: projectedCashFlow, dot: "green" },
-  { label: "Actual Net Cash Flow", value: actualCashFlow, dot: "blue" },
-  { label: "Total Receivables", value: totalReceivables, dot: "amber" },
-  { label: "Total Payables", value: totalPayables, dot: "blue" },
-  { label: "Overdue Shipper Amount", value: kpis.overdueShipperAmount, dot: "red" },
-  { label: "Overdue Carrier Amount", value: kpis.overdueCarrierAmount, dot: "red" },
-];
-
+    const kpiList = [
+      { label: "Projected Net Cash Flow", value: kpis.projectedCashFlow, dot: "green" },
+      { label: "Actual Net Cash Flow", value: kpis.actualCashFlow, dot: "blue" },
+      { label: "Total Receivables", value: kpis.totalReceivables, dot: "amber" },
+      { label: "Total Payables", value: kpis.totalPayables, dot: "blue" },
+      { label: "Overdue Shipper Amount", value: kpis.overdueShipperAmount, dot: "red" },
+      { label: "Overdue Carrier Amount", value: kpis.overdueCarrierAmount, dot: "red" },
+    ];
 
     return (
       <div className="kpi-bar">
@@ -163,7 +160,7 @@ const { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, over
     const formatDueDate = (billDate, days) => {
       if (!billDate) return "—";
       const date = new Date(billDate);
-      date.setDate(date.getDate() + days);
+      date.setUTCDate(date.getUTCDate() + days); // Use UTC-safe addition
       return date.toLocaleDateString();
     };
 
@@ -270,22 +267,20 @@ const { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, over
       </header>
 
       <div className="quick-actions flex items-center gap-4 mb-4">
-  {/* Upload CSV */}
-  <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} ref={invoiceInputRef} />
+        {/* Upload CSV */}
+        <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} ref={invoiceInputRef} />
 
-  {/* Download Report button */}
-  <button className="qa-btn" onClick={() => alert("Download Report feature coming soon!")}>
-    Download Report
-  </button>
+        {/* Download Report button */}
+        <button className="qa-btn" onClick={() => alert("Download Report feature coming soon!")}>
+          Download Report
+        </button>
 
-  {/* Search invoices */}
-  <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-</div>
-
+        {/* Search invoices */}
+        <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      </div>
 
       <NetCashSummary kpis={kpis} />
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
     </div>
   );
 }
-
