@@ -254,13 +254,23 @@ export default function Frontend({ userEmail }) {
         </button>
       </header>
 
-      <div className="quick-actions flex gap-4 mb-4">
-        <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} ref={invoiceInputRef} />
-        <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-      </div>
+      <div className="quick-actions flex items-center gap-4 mb-4">
+  {/* Upload CSV */}
+  <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} ref={invoiceInputRef} />
+
+  {/* Download Report button */}
+  <button className="qa-btn" onClick={() => alert("Download Report feature coming soon!")}>
+    Download Report
+  </button>
+
+  {/* Search invoices */}
+  <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+</div>
+
 
       <NetCashSummary kpis={kpis} />
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
     </div>
   );
 }
+

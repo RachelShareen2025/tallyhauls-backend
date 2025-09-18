@@ -167,3 +167,10 @@ input[type="checkbox"].paid-green { accent-color: var(--brand-accent); }
   flex: 1;
   min-width: 200px;
 }
+.quick-actions {
+  display: flex;
+  align-items: center; /* ensures vertical alignment */
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 24px;
+}

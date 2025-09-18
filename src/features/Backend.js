@@ -61,7 +61,7 @@ export async function insertInvoices(rows, fileUrl) {
     if (error) throw error;
     return { success: true };
   } catch (err) {
-    console.error("❌ DB insert failed:", err.message);
+    console.error("   DB insert failed:", err.message);
     return { success: false, error: err.message };
   }
 }
@@ -158,7 +158,7 @@ export async function uploadFileToStorage(file, brokerEmail, isFailed = false) {
 
     return { success: true, fileUrl: publicUrlData.publicUrl };
   } catch (err) {
-    console.error("❌ Storage upload failed:", err.message);
+    console.error("   Storage upload failed:", err.message);
     return { success: false, error: err.message };
   }
 }
@@ -186,7 +186,7 @@ export async function uploadInvoiceFile(file, brokerEmail) {
 
     return { success: true, fileUrl: storageRes.fileUrl };
   } catch (err) {
-    console.error("🔥 Upload failed:", err.message);
+    console.error("   Upload failed:", err.message);
     return { success: false, error: err.message };
   }
 }
@@ -204,7 +204,7 @@ export async function updateInvoiceStatus(invoiceId, field, value) {
     if (error) throw error;
     return { success: true };
   } catch (err) {
-    console.error("❌ Update failed:", err.message);
+    console.error("   Update failed:", err.message);
     return { success: false, error: err.message };
   }
 }
@@ -223,7 +223,7 @@ export async function bulkUpdateInvoiceStatus(invoiceIds, field, value) {
     if (error) throw error;
     return { success: true };
   } catch (err) {
-    console.error("❌ Bulk update failed:", err.message);
+    console.error("    Bulk update failed:", err.message);
     return { success: false, error: err.message };
   }
 }
