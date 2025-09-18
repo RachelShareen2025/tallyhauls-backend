@@ -35,11 +35,22 @@ export function calculateTotalPayables(rows) {
     .reduce((sum, r) => sum + (r.carrier_pay || 0), 0);
 }
 
-export function calculateOverdueAmount(rows) {
+export function calculateOverdueShipperAmount(rows) {
+  const today = new Date();
   return rows
-    .filter(r => r.flagged_reason)
-    .reduce((sum, r) => sum + ((r.total_charge || 0) - (r.carrier_pay || 0)), 0);
+    .filter(r => !r.shipper_paid && r.bill_date)
+    .filter(r => new Date(r.bill_date).getTime() + 30 * 86400000 < today.getTime())
+    .reduce((sum, r) => sum + (r.total_charge || 0), 0);
 }
+
+export function calculateOverdueCarrierAmount(rows) {
+  const today = new Date();
+  return rows
+    .filter(r => !r.carrier_paid && r.bill_date)
+    .filter(r => new Date(r.bill_date).getTime() + 15 * 86400000 < today.getTime())
+    .reduce((sum, r) => sum + (r.carrier_pay || 0), 0);
+}
+
 
 export function computeKPIs(rows) {
   return {
@@ -47,7 +58,8 @@ export function computeKPIs(rows) {
     actualCashFlow: calculateActualNetCashFlow(rows),
     totalReceivables: calculateTotalReceivables(rows),
     totalPayables: calculateTotalPayables(rows),
-    overdueAmount: calculateOverdueAmount(rows),
+    overdueShipperAmount: calculateOverdueShipperAmount(rows),
+    overdueCarrierAmount: calculateOverdueCarrierAmount(rows),
   };
 }
 

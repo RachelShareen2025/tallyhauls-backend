@@ -114,13 +114,15 @@ export default function Frontend({ userEmail }) {
     if (!kpis) return null;
     const { projectedCashFlow, actualCashFlow, totalReceivables, totalPayables, overdueAmount } = kpis;
 
-    const kpiList = [
-      { label: "Projected Net Cash Flow", value: projectedCashFlow, dot: "green" },
-      { label: "Actual Net Cash Flow", value: actualCashFlow, dot: "blue" },
-      { label: "Total Receivables", value: totalReceivables, dot: "amber" },
-      { label: "Total Payables", value: totalPayables, dot: "blue" },
-      { label: "Overdue Amount", value: overdueAmount, dot: "red" },
-    ];
+   const kpiList = [
+  { label: "Projected Net Cash Flow", value: projectedCashFlow, dot: "green" },
+  { label: "Actual Net Cash Flow", value: actualCashFlow, dot: "blue" },
+  { label: "Total Receivables", value: totalReceivables, dot: "amber" },
+  { label: "Total Payables", value: totalPayables, dot: "blue" },
+  { label: "Overdue Shipper Amount", value: kpis.overdueShipperAmount, dot: "red" },
+  { label: "Overdue Carrier Amount", value: kpis.overdueCarrierAmount, dot: "red" },
+];
+
 
     return (
       <div className="kpi-bar">
