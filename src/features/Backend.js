@@ -35,7 +35,7 @@ export function calculateTotalPayables(rows) {
     .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
 }
 
-// ✅ UTC-safe overdue calculations
+// ✅ Overdue calculations using shipper_due / carrier_due
 export function calculateOverdueShipperAmount(rows) {
   const todayUTC = new Date(Date.UTC(
     new Date().getUTCFullYear(),
@@ -44,13 +44,8 @@ export function calculateOverdueShipperAmount(rows) {
   ));
 
   return rows.reduce((sum, r) => {
-    if (!r.shipper_paid && r.bill_date) {
-      const billUTC = new Date(r.bill_date + "T00:00:00Z");
-      const dueUTC = new Date(Date.UTC(
-        billUTC.getUTCFullYear(),
-        billUTC.getUTCMonth(),
-        billUTC.getUTCDate() + 30
-      ));
+    if (!r.shipper_paid && r.shipper_due) {
+      const dueUTC = new Date(r.shipper_due + "T00:00:00Z");
       if (dueUTC < todayUTC) return sum + Number(r.total_charge || 0);
     }
     return sum;
@@ -65,13 +60,8 @@ export function calculateOverdueCarrierAmount(rows) {
   ));
 
   return rows.reduce((sum, r) => {
-    if (!r.carrier_paid && r.bill_date) {
-      const billUTC = new Date(r.bill_date + "T00:00:00Z");
-      const dueUTC = new Date(Date.UTC(
-        billUTC.getUTCFullYear(),
-        billUTC.getUTCMonth(),
-        billUTC.getUTCDate() + 15
-      ));
+    if (!r.carrier_paid && r.carrier_due) {
+      const dueUTC = new Date(r.carrier_due + "T00:00:00Z");
       if (dueUTC < todayUTC) return sum + Number(r.carrier_pay || 0);
     }
     return sum;
@@ -141,7 +131,6 @@ export function parseInvoiceCSV(fileText) {
     const loadNumber = getCsvValue(row, csvMap.load_number)?.trim();
     if (!loadNumber) return { flagged_reason: "Missing load_number", ...row };
 
-    // Parse numbers safely
     const parseNumber = (val) => {
       if (!val) return 0;
       const cleaned = String(val).replace(/[^0-9.-]+/g, "");
@@ -151,8 +140,7 @@ export function parseInvoiceCSV(fileText) {
     const totalCharge = parseNumber(getCsvValue(row, csvMap.total_charge));
     const carrierPay = parseNumber(getCsvValue(row, csvMap.carrier_pay));
 
-    // Normalize bill_date to YYYY-MM-DD
-    const billDateRaw = getCsvValue(row, csvMap.bill_date);
+    let billDateRaw = getCsvValue(row, csvMap.bill_date);
     let billDateFormatted = null;
     let billDateObj = null;
 
@@ -164,15 +152,11 @@ export function parseInvoiceCSV(fileText) {
       }
     }
 
-    // Flagged reasons (overdue)
     let flaggedReason = null;
     const today = new Date();
     if (billDateObj) {
-      if (new Date(billDateObj.getTime() + 30 * 86400000) < today) {
-        flaggedReason = "Past Due – Shipper";
-      } else if (new Date(billDateObj.getTime() + 15 * 86400000) < today) {
-        flaggedReason = "Past Due – Carrier";
-      }
+      if (new Date(billDateObj.getTime() + 30 * 86400000) < today) flaggedReason = "Past Due – Shipper";
+      else if (new Date(billDateObj.getTime() + 15 * 86400000) < today) flaggedReason = "Past Due – Carrier";
     }
 
     return {
@@ -181,16 +165,12 @@ export function parseInvoiceCSV(fileText) {
       shipper: getCsvValue(row, csvMap.shipper)?.trim(),
       total_charge: parseFloat(totalCharge.toFixed(2)),
       shipper_terms: "Net 30",
-      shipper_due: billDateObj
-        ? new Date(billDateObj.getTime() + 30 * 86400000).toISOString().split("T")[0]
-        : null,
+      shipper_due: billDateObj ? new Date(billDateObj.getTime() + 30 * 86400000).toISOString().split("T")[0] : null,
       shipper_paid: false,
       carrier: getCsvValue(row, csvMap.carrier)?.trim(),
       carrier_pay: parseFloat(carrierPay.toFixed(2)),
       carrier_terms: "Net 15",
-      carrier_due: billDateObj
-        ? new Date(billDateObj.getTime() + 15 * 86400000).toISOString().split("T")[0]
-        : null,
+      carrier_due: billDateObj ? new Date(billDateObj.getTime() + 15 * 86400000).toISOString().split("T")[0] : null,
       carrier_paid: false,
       flagged_reason: flaggedReason,
       created_at: new Date().toISOString(),
