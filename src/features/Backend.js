@@ -37,19 +37,32 @@ export function calculateTotalPayables(rows) {
 
 export function calculateOverdueShipperAmount(rows) {
   const today = new Date();
-  return rows
-    .filter(r => !r.shipper_paid && r.bill_date)
-    .filter(r => new Date(r.bill_date).getTime() + 30 * 86400000 < today.getTime())
-    .reduce((sum, r) => sum + (r.total_charge || 0), 0);
+  return rows.reduce((sum, r) => {
+    if (!r.shipper_paid && r.bill_date) {
+      const billDate = new Date(r.bill_date);
+      const dueDate = new Date(billDate.getTime() + 30 * 86400000); // 30 days Net 30
+      if (today > dueDate) {
+        return sum + (parseFloat(r.total_charge) || 0);
+      }
+    }
+    return sum;
+  }, 0);
 }
 
 export function calculateOverdueCarrierAmount(rows) {
   const today = new Date();
-  return rows
-    .filter(r => !r.carrier_paid && r.bill_date)
-    .filter(r => new Date(r.bill_date).getTime() + 15 * 86400000 < today.getTime())
-    .reduce((sum, r) => sum + (r.carrier_pay || 0), 0);
+  return rows.reduce((sum, r) => {
+    if (!r.carrier_paid && r.bill_date) {
+      const billDate = new Date(r.bill_date);
+      const dueDate = new Date(billDate.getTime() + 15 * 86400000); // 15 days Net 15
+      if (today > dueDate) {
+        return sum + (parseFloat(r.carrier_pay) || 0);
+      }
+    }
+    return sum;
+  }, 0);
 }
+
 
 
 export function computeKPIs(rows) {
