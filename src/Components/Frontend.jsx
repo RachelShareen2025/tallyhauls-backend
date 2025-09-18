@@ -1,5 +1,5 @@
 // src/Components/Frontend.jsx
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import {
   uploadInvoiceFile,
@@ -10,6 +10,7 @@ import "./Dashboard.css";
 
 export default function Frontend({ userEmail }) {
   const [invoices, setInvoices] = useState([]);
+  const [kpis, setKpis] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const invoiceInputRef = useRef(null);
 
@@ -33,6 +34,7 @@ export default function Frontend({ userEmail }) {
         carrier_paid: !!inv.carrier_paid
       }));
       setInvoices(normalizedData);
+      setKpis(computeKPIs(normalizedData)); // ✅ compute KPIs on fetch
     }
   };
 
@@ -51,19 +53,21 @@ export default function Frontend({ userEmail }) {
     await fetchInvoices();
   };
 
-  // Toggle single paid checkbox with instant KPI update
+  // Toggle single paid checkbox
   const handlePaidToggle = async (invoiceId, field, currentValue) => {
-    // Optimistic UI update
-    setInvoices((prev) =>
-      prev.map((inv) => (inv.id === invoiceId ? { ...inv, [field]: !currentValue } : inv))
+    const updatedInvoices = invoices.map(inv =>
+      inv.id === invoiceId ? { ...inv, [field]: !currentValue } : inv
     );
+
+    // Update state first for instant UI reflection
+    setInvoices(updatedInvoices);
+    setKpis(computeKPIs(updatedInvoices)); // ✅ Recompute KPIs immediately
 
     const res = await updateInvoiceStatus(invoiceId, field, !currentValue);
     if (!res.success) {
       // Revert on failure
-      setInvoices((prev) =>
-        prev.map((inv) => (inv.id === invoiceId ? { ...inv, [field]: currentValue } : inv))
-      );
+      setInvoices(invoices);
+      setKpis(computeKPIs(invoices));
       alert(`Update failed: ${res.error}`);
     }
   };
@@ -160,7 +164,7 @@ export default function Frontend({ userEmail }) {
     const formatDueDate = (billDate, days) => {
       if (!billDate) return "—";
       const date = new Date(billDate);
-      date.setUTCDate(date.getUTCDate() + days); // UTC-safe addition
+      date.setUTCDate(date.getUTCDate() + days);
       return date.toLocaleDateString();
     };
 
@@ -203,12 +207,10 @@ export default function Frontend({ userEmail }) {
                 const shipperTermsDisplay = billDate ? `Net 30 - ${formatDueDate(billDate, 30)}` : "Net 30 - —";
                 const carrierTermsDisplay = billDate ? `Net 15 - ${formatDueDate(billDate, 15)}` : "Net 15 - —";
 
-                // New: red highlight only if invoice is overdue and not fully paid
-                const isOverdue =
-                  (inv.flagged_reason && (!inv.shipper_paid || !inv.carrier_paid)) ? "row-flagged" : "";
-
                 return (
-                  <tr key={inv.id} className={isOverdue}>
+                  <tr key={inv.id} className={
+                      inv.flagged_reason && !(inv.shipper_paid && inv.carrier_paid) ? "row-flagged" : ""
+                    }>
                     <td>{inv.load_number || "—"}</td>
                     <td>{billDate ? billDate.toLocaleDateString() : "—"}</td>
                     <td>{inv.shipper || "—"}</td>
@@ -258,9 +260,6 @@ export default function Frontend({ userEmail }) {
     );
   };
 
-  // Memoize KPI calculations
-  const kpis = useMemo(() => computeKPIs(invoices), [invoices]);
-
   return (
     <div className="dashboard-container p-4">
       <header className="dashboard-header flex justify-between items-center mb-4">
@@ -272,11 +271,9 @@ export default function Frontend({ userEmail }) {
 
       <div className="quick-actions flex items-center gap-4 mb-4">
         <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} ref={invoiceInputRef} />
-
         <button className="qa-btn" onClick={() => alert("Download Report feature coming soon!")}>
           Download Report
         </button>
-
         <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       </div>
 
