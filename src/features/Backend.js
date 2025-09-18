@@ -5,9 +5,6 @@ import Papa from "papaparse";
 /* -----------------------------
    1️⃣ KPI Calculations
 ----------------------------- */
-/* -----------------------------
-   1️⃣ KPI Calculations (Fixed)
------------------------------ */
 export function calculateProjectedNetCashFlow(rows) {
   const totalCharges = rows.reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
   const totalCarrierPay = rows.reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
@@ -65,7 +62,6 @@ export function computeKPIs(rows) {
   };
 }
 
-
 /* -----------------------------
    2️⃣ Insert Invoices
 ----------------------------- */
@@ -107,6 +103,7 @@ export function parseInvoiceCSV(fileText) {
   let rows = parsed.data;
   if (!rows || rows.length === 0) throw new Error("CSV is empty or invalid.");
 
+  // Normalize headers
   rows = rows.map(row => {
     const normalizedRow = {};
     for (let key in row) normalizedRow[normalizeHeader(key)] = row[key];
@@ -117,25 +114,38 @@ export function parseInvoiceCSV(fileText) {
     const loadNumber = getCsvValue(row, csvMap.load_number)?.trim();
     if (!loadNumber) return { flagged_reason: "Missing load_number", ...row };
 
+    // Parse numbers safely
     const parseNumber = (val) => {
-  if (!val) return 0;
-  const cleaned = String(val).replace(/[^0-9.-]+/g, ""); // removes $ signs, commas, spaces
-  return parseFloat(cleaned) || 0;
-};
+      if (!val) return 0;
+      const cleaned = String(val).replace(/[^0-9.-]+/g, ""); // removes $, commas, spaces
+      return parseFloat(cleaned) || 0;
+    };
 
-const totalCharge = parseNumber(getCsvValue(row, csvMap.total_charge));
-const carrierPay = parseNumber(getCsvValue(row, csvMap.carrier_pay));
+    const totalCharge = parseNumber(getCsvValue(row, csvMap.total_charge));
+    const carrierPay = parseNumber(getCsvValue(row, csvMap.carrier_pay));
 
-   const billDateRaw = getCsvValue(row, csvMap.bill_date);
-const billDate = billDateRaw ? new Date(billDateRaw) : null;
-const billDateFormatted = billDate ? billDate.toISOString().split("T")[0] : null;
+    // Normalize bill_date to YYYY-MM-DD
+    const billDateRaw = getCsvValue(row, csvMap.bill_date);
+    let billDateFormatted = null;
+    let billDateObj = null;
 
+    if (billDateRaw) {
+      const parsedDate = new Date(billDateRaw);
+      if (!isNaN(parsedDate.getTime())) {
+        billDateObj = parsedDate;
+        billDateFormatted = parsedDate.toISOString().split("T")[0]; // YYYY-MM-DD
+      }
+    }
 
+    // Flagged reasons (overdue)
     let flaggedReason = null;
     const today = new Date();
-    if (billDate) {
-      if (new Date(billDate.getTime() + 30 * 86400000) < today) flaggedReason = "Past Due – Shipper";
-      else if (new Date(billDate.getTime() + 15 * 86400000) < today) flaggedReason = "Past Due – Carrier";
+    if (billDateObj) {
+      if (new Date(billDateObj.getTime() + 30 * 86400000) < today) {
+        flaggedReason = "Past Due – Shipper";
+      } else if (new Date(billDateObj.getTime() + 15 * 86400000) < today) {
+        flaggedReason = "Past Due – Carrier";
+      }
     }
 
     return {
@@ -144,17 +154,21 @@ const billDateFormatted = billDate ? billDate.toISOString().split("T")[0] : null
       shipper: getCsvValue(row, csvMap.shipper)?.trim(),
       total_charge: parseFloat(totalCharge.toFixed(2)),
       shipper_terms: "Net 30",
-      shipper_due: billDate ? new Date(billDate.getTime() + 30 * 86400000).toISOString().split("T")[0] : null,
+      shipper_due: billDateObj
+        ? new Date(billDateObj.getTime() + 30 * 86400000).toISOString().split("T")[0]
+        : null,
       shipper_paid: false,
       carrier: getCsvValue(row, csvMap.carrier)?.trim(),
       carrier_pay: parseFloat(carrierPay.toFixed(2)),
       carrier_terms: "Net 15",
-      carrier_due: billDate ? new Date(billDate.getTime() + 15 * 86400000).toISOString().split("T")[0] : null,
+      carrier_due: billDateObj
+        ? new Date(billDateObj.getTime() + 15 * 86400000).toISOString().split("T")[0]
+        : null,
       carrier_paid: false,
       flagged_reason: flaggedReason,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      file_url: row.file_url || null
+      file_url: row.file_url || null,
     };
   });
 }
@@ -234,7 +248,6 @@ export async function updateInvoiceStatus(invoiceId, field, value) {
 
 /* -----------------------------
    7️⃣ Bulk Update Invoice Status
-       (For multiple IDs only)
 ----------------------------- */
 export async function bulkUpdateInvoiceStatus(invoiceIds, field, value) {
   try {
