@@ -34,13 +34,28 @@ export default function Frontend({ userEmail }) {
         carrier_paid: !!inv.carrier_paid
       }));
       setInvoices(normalizedData);
-      setKpis(computeKPIs(normalizedData)); // ✅ compute KPIs on fetch
     }
   };
 
   useEffect(() => {
     fetchInvoices();
   }, []);
+
+  // ✅ Always recompute KPIs when invoices change
+  useEffect(() => {
+    if (invoices.length > 0) {
+      setKpis(computeKPIs(invoices));
+    } else {
+      setKpis({
+        projectedCashFlow: 0,
+        actualCashFlow: 0,
+        totalReceivables: 0,
+        totalPayables: 0,
+        overdueShipperAmount: 0,
+        overdueCarrierAmount: 0
+      });
+    }
+  }, [invoices]);
 
   // Logout
   const handleLogout = async () => {
@@ -61,13 +76,11 @@ export default function Frontend({ userEmail }) {
 
     // Update state first for instant UI reflection
     setInvoices(updatedInvoices);
-    setKpis(computeKPIs(updatedInvoices)); // ✅ Recompute KPIs immediately
 
     const res = await updateInvoiceStatus(invoiceId, field, !currentValue);
     if (!res.success) {
       // Revert on failure
       setInvoices(invoices);
-      setKpis(computeKPIs(invoices));
       alert(`Update failed: ${res.error}`);
     }
   };
