@@ -23,14 +23,16 @@ export default function Frontend({ userEmail }) {
     if (error) console.error("Error fetching invoices:", error);
 else {
   const normalizedData = (data || []).map(inv => ({
-    ...inv,
-    total_charge: parseFloat(inv.total_charge) || 0,
-    carrier_pay: parseFloat(inv.carrier_pay) || 0,
-    bill_date: inv.bill_date ? new Date(inv.bill_date) : null,
-    shipper_paid: !!inv.shipper_paid,
-    carrier_paid: !!inv.carrier_paid
-  }));
-  setInvoices(normalizedData);
+  ...inv,
+  total_charge: parseFloat(inv.total_charge) || 0,
+  carrier_pay: parseFloat(inv.carrier_pay) || 0,
+  bill_date: inv.bill_date ? new Date(inv.bill_date) : null,
+  shipper_due: inv.shipper_due ? new Date(inv.shipper_due) : null,
+  carrier_due: inv.carrier_due ? new Date(inv.carrier_due) : null,
+  shipper_paid: !!inv.shipper_paid,
+  carrier_paid: !!inv.carrier_paid
+}));
+voices(normalizedData);
 }
 
   };
