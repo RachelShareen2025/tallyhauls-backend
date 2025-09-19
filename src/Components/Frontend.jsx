@@ -135,33 +135,50 @@ export default function Frontend({ userEmail }) {
     );
   };
 
-  const NetCashSummary = ({ kpis }) => {
-    if (!kpis) return null;
+  const NetCashSummary = ({ invoices }) => {
+  if (!invoices || invoices.length === 0) return null;
 
-    const kpiList = [
-      { label: "Projected Net Cash Flow", value: kpis.projectedCashFlow, dot: "green" },
-      { label: "Actual Net Cash Flow", value: kpis.actualCashFlow, dot: "blue" },
-      { label: "Total Receivables", value: kpis.totalReceivables, dot: "amber" },
-      { label: "Total Payables", value: kpis.totalPayables, dot: "blue" },
-      { label: "Overdue Shipper Amount", value: kpis.overdueShipperAmount, dot: "red" },
-      { label: "Overdue Carrier Amount", value: kpis.overdueCarrierAmount, dot: "red" },
-    ];
+  const projectedCashFlow = invoices.reduce((sum, inv) => sum + (inv.total_charge || 0), 0);
+  const actualCashFlow = invoices.reduce(
+    (sum, inv) => sum + ((inv.shipper_paid ? inv.total_charge : 0) - (inv.carrier_paid ? inv.carrier_pay : 0)),
+    0
+  );
+  const totalReceivables = invoices.reduce((sum, inv) => sum + (inv.total_charge || 0), 0);
+  const totalPayables = invoices.reduce((sum, inv) => sum + (inv.carrier_pay || 0), 0);
+  const overdueShipperAmount = invoices.reduce(
+    (sum, inv) => sum + ((inv.shipper_due && !inv.shipper_paid) ? (inv.total_charge || 0) : 0),
+    0
+  );
+  const overdueCarrierAmount = invoices.reduce(
+    (sum, inv) => sum + ((inv.carrier_due && !inv.carrier_paid) ? (inv.carrier_pay || 0) : 0),
+    0
+  );
 
-    return (
-      <div className="kpi-bar">
-        {kpiList.map((kpi) => (
-          <div className="kpi-card" key={kpi.label}>
-            <div className="kpi-top">
-              <span className={`dot dot-${kpi.dot}`}></span> {kpi.label}
-            </div>
-            <div className={`kpi-value ${kpi.value < 0 ? "negative" : ""}`}>
-              ${Number(kpi.value || 0).toFixed(2)}
-            </div>
+  const kpiList = [
+    { label: "Projected Net Cash Flow", value: projectedCashFlow, dot: "green" },
+    { label: "Actual Net Cash Flow", value: actualCashFlow, dot: "blue" },
+    { label: "Total Receivables", value: totalReceivables, dot: "amber" },
+    { label: "Total Payables", value: totalPayables, dot: "blue" },
+    { label: "Overdue Shipper Amount", value: overdueShipperAmount, dot: "red" },
+    { label: "Overdue Carrier Amount", value: overdueCarrierAmount, dot: "red" },
+  ];
+
+  return (
+    <div className="kpi-bar">
+      {kpiList.map((kpi) => (
+        <div className="kpi-card" key={kpi.label}>
+          <div className="kpi-top">
+            <span className={`dot dot-${kpi.dot}`}></span> {kpi.label}
           </div>
-        ))}
-      </div>
-    );
-  };
+          <div className={`kpi-value ${kpi.value < 0 ? "negative" : ""}`}>
+            ${Number(kpi.value || 0).toFixed(2)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 
   const InvoiceTable = ({ invoices, searchQuery }) => {
     if (!invoices) return null;
@@ -264,31 +281,33 @@ export default function Frontend({ userEmail }) {
   })}
 
   {/* Totals row */}
-  {invoices.length > 0 && (
-    <tr style={{ fontWeight: "bold", backgroundColor: "#f9f9f9" }}>
-      <td colSpan="3" style={{ textAlign: "right" }}>Totals:</td>
-      <td style={{ textAlign: "center" }}>
-        ${invoices.reduce((sum, inv) => sum + (inv.total_charge || 0), 0).toFixed(2)}
-      </td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td style={{ textAlign: "center" }}>
-        ${invoices.reduce((sum, inv) => sum + (inv.carrier_pay || 0), 0).toFixed(2)}
-      </td>
-      <td></td>
-      <td></td>
-      <td className="numeric">
-        ${invoices.reduce((sum, inv) => sum + ((inv.total_charge || 0) - (inv.carrier_pay || 0)), 0).toFixed(2)}
-      </td>
-      <td>
-        ${kpis.overdueShipperAmount.toFixed(2)}
-      </td>
-      <td>
-        ${kpis.overdueCarrierAmount.toFixed(2)}
-      </td>
-    </tr>
-  )}
+ {/* Totals row */}
+{invoices.length > 0 && (
+  <tr style={{ fontWeight: "bold", backgroundColor: "#f9f9f9" }}>
+    <td colSpan="3" style={{ textAlign: "right"}}>Totals:</td>
+    <td style={{ textAlign: "center" }}>
+      ${filteredInvoices.reduce((sum, inv) => sum + (inv.total_charge || 0), 0).toFixed(2)}
+    </td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td style={{ textAlign: "center" }}>
+      ${filteredInvoices.reduce((sum, inv) => sum + (inv.carrier_pay || 0), 0).toFixed(2)}
+    </td>
+    <td></td>
+    <td></td>
+    <td className="numeric">
+      ${filteredInvoices.reduce((sum, inv) => sum + ((inv.total_charge || 0) - (inv.carrier_pay || 0)), 0).toFixed(2)}
+    </td>
+    <td>
+      ${filteredInvoices.reduce((sum, inv) => sum + ((inv.shipper_due && !inv.shipper_paid) ? (inv.total_charge || 0) : 0), 0).toFixed(2)}
+    </td>
+    <td>
+      ${filteredInvoices.reduce((sum, inv) => sum + ((inv.carrier_due && !inv.carrier_paid) ? (inv.carrier_pay || 0) : 0), 0).toFixed(2)}
+    </td>
+  </tr>
+)}
+
 </tbody>
 
           </table>
@@ -368,7 +387,7 @@ export default function Frontend({ userEmail }) {
         <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       </div>
 
-      <NetCashSummary kpis={kpis} />
+      <NetCashSummary invoices={filteredInvoices || invoices} />
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
     </div>
   );
