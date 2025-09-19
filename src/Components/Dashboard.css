@@ -38,34 +38,29 @@
 }
 
 /* Logout Button */
-/* Logout Button */
 .logout-btn {
-  padding: 10px 20px !important;
-  border: none !important;
-  border-radius: var(--radius) !important;
-  background-color: var(--brand-accent) !important; /* force the green */
-  color: #fff !important;
-  font-weight: 600 !important;
-  font-size: 0.95rem !important;
-  cursor: pointer !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-  transition: background 0.2s ease, transform 0.1s ease !important;
-  text-decoration: none !important;
-  text-align: center !important;
-  display: inline-block !important;
-  line-height: 1.2 !important;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius);
+  background-color: var(--brand-accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
 .logout-btn:hover,
 .logout-btn:focus {
-  background-color: #2fb487 !important; /* slightly darker green */
-  transform: translateY(-1px) !important;
-  outline: none !important;
+  background-color: #2fb487;
+  transform: translateY(-1px);
+  outline: none;
 }
 
 .logout-btn:active {
-  transform: translateY(0px) !important;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+  transform: translateY(0px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 /* ---------- KPI Bar ---------- */
@@ -83,6 +78,9 @@
   flex: 1 1 160px;
   padding: 16px;
   min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .kpi-top {
@@ -138,7 +136,11 @@
   border-bottom: 1px solid #eee;
 }
 
-.data-table th { text-align: center; color: var(--muted); font-weight: 500; }
+.data-table th { 
+  text-align: center; 
+  color: var(--muted); 
+  font-weight: 500; 
+}
 
 .data-table td.numeric { text-align: right; }
 
@@ -153,9 +155,10 @@ input[type="checkbox"].paid-green { accent-color: var(--brand-accent); }
 /* Flagged Row */
 .row-flagged { background: #ffeaea; }
 
-/* Quick Actions + Search */
+/* ---------- Quick Actions + Search ---------- */
 .quick-actions {
   display: flex;
+  align-items: center;
   gap: 16px;
   flex-wrap: wrap;
   padding: 16px 24px;
@@ -170,6 +173,7 @@ input[type="checkbox"].paid-green { accent-color: var(--brand-accent); }
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
+  min-height: 42px; /* keeps Upload & Download same height */
 }
 
 .qa-btn:hover { background: #2fb487; }
@@ -180,15 +184,4 @@ input[type="checkbox"].paid-green { accent-color: var(--brand-accent); }
   border: 1px solid #ccc;
   flex: 1;
   min-width: 200px;
-}
-.quick-actions {
-  display: flex;
-  align-items: center; /* ensures vertical alignment */
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 16px 24px;
-}
-
-.quick-actions .qa-btn {
-  min-height: 42px;  /* makes Upload CSV and Download Report same height */
 }

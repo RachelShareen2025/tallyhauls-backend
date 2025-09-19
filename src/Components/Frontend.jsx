@@ -12,7 +12,6 @@ export default function Frontend({ userEmail }) {
   const [invoices, setInvoices] = useState([]);
   const [kpis, setKpis] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
-  const invoiceInputRef = useRef(null);
 
   // Fetch invoices
   const fetchInvoices = async () => {
@@ -41,7 +40,7 @@ export default function Frontend({ userEmail }) {
     fetchInvoices();
   }, []);
 
-  // ✅ Always recompute KPIs when invoices change
+  // Recompute KPIs whenever invoices change
   useEffect(() => {
     if (invoices.length > 0) {
       setKpis(computeKPIs(invoices));
@@ -63,7 +62,7 @@ export default function Frontend({ userEmail }) {
     window.location.href = "/";
   };
 
-  // Handle invoice upload -> refresh list after upload
+  // Refresh invoice list after upload
   const handleInvoiceUpload = async (file) => {
     await fetchInvoices();
   };
@@ -73,13 +72,10 @@ export default function Frontend({ userEmail }) {
     const updatedInvoices = invoices.map(inv =>
       inv.id === invoiceId ? { ...inv, [field]: !currentValue } : inv
     );
-
-    // Update state first for instant UI reflection
     setInvoices(updatedInvoices);
 
     const res = await updateInvoiceStatus(invoiceId, field, !currentValue);
     if (!res.success) {
-      // Revert on failure
       setInvoices(invoices);
       alert(`Update failed: ${res.error}`);
     }
@@ -174,12 +170,7 @@ export default function Frontend({ userEmail }) {
       JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const formatDueDate = (billDate, days) => {
-      if (!billDate) return "—";
-      const date = new Date(billDate);
-      date.setUTCDate(date.getUTCDate() + days);
-      return date.toLocaleDateString();
-    };
+    const formatDue = (date) => date ? new Date(date).toLocaleDateString() : "—";
 
     return (
       <div className="card" style={{ margin: "0 24px 24px" }}>
@@ -216,16 +207,21 @@ export default function Frontend({ userEmail }) {
 
               {filteredInvoices.map((inv) => {
                 const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
-                const billDate = inv.bill_date ? new Date(inv.bill_date) : null;
-                const shipperTermsDisplay = billDate ? `Net 30 - ${formatDueDate(billDate, 30)}` : "Net 30 - —";
-                const carrierTermsDisplay = billDate ? `Net 15 - ${formatDueDate(billDate, 15)}` : "Net 15 - —";
+                
+                const shipperTermsDisplay = inv.shipper_due
+                  ? `Net 30 - ${formatDue(inv.shipper_due)}`
+                  : "Net 30 - —";
+
+                const carrierTermsDisplay = inv.carrier_due
+                  ? `Net 15 - ${formatDue(inv.carrier_due)}`
+                  : "Net 15 - —";
 
                 return (
                   <tr key={inv.id} className={
                       inv.flagged_reason && !(inv.shipper_paid && inv.carrier_paid) ? "row-flagged" : ""
                     }>
                     <td>{inv.load_number || "—"}</td>
-                    <td>{billDate ? billDate.toLocaleDateString() : "—"}</td>
+                    <td>{inv.bill_date ? formatDue(inv.bill_date) : "—"}</td>
                     <td>{inv.shipper || "—"}</td>
                     <td style={{ textAlign: "center" }}>{Number(inv.total_charge || 0).toFixed(2)}</td>
                     <td>{shipperTermsDisplay}</td>
@@ -272,6 +268,60 @@ export default function Frontend({ userEmail }) {
       </div>
     );
   };
+  // ======================
+  // Download CSV / Report
+  // ======================
+  const downloadReport = () => {
+    if (!invoices || invoices.length === 0) return alert("No invoices to download.");
+
+    const escapeCSV = (text) => `"${String(text || "").replace(/"/g, '""')}"`;
+
+    const headers = [
+      "Load #", "Bill Date", "Shipper", "Load Rate ($)", "Shipper Terms & Due",
+      "Shipper Paid", "Carrier", "Carrier Pay ($)", "Carrier Terms & Due",
+      "Carrier Paid", "Net Cash", "Flagged Reason", "File"
+    ];
+
+    const rows = invoices.map(inv => [
+      escapeCSV(inv.load_number),
+      escapeCSV(inv.bill_date ? new Date(inv.bill_date).toLocaleDateString() : ""),
+      escapeCSV(inv.shipper),
+      (inv.total_charge || 0).toFixed(2),
+      escapeCSV(`Net 30 - ${inv.shipper_due ? new Date(inv.shipper_due).toLocaleDateString() : ""}`),
+      inv.shipper_paid ? "Yes" : "No",
+      escapeCSV(inv.carrier),
+      (inv.carrier_pay || 0).toFixed(2),
+      escapeCSV(`Net 15 - ${inv.carrier_due ? new Date(inv.carrier_due).toLocaleDateString() : ""}`),
+      inv.carrier_paid ? "Yes" : "No",
+      ((inv.total_charge || 0) - (inv.carrier_pay || 0)).toFixed(2),
+      escapeCSV(inv.flagged_reason),
+      escapeCSV(inv.file_url)
+    ]);
+
+    // KPI summary block (Option B)
+    const kpiRows = [
+      ["", "", "KPIs"],
+      ["Projected Net Cash Flow", kpis.projectedCashFlow.toFixed(2)],
+      ["Actual Net Cash Flow", kpis.actualCashFlow.toFixed(2)],
+      ["Total Receivables", kpis.totalReceivables.toFixed(2)],
+      ["Total Payables", kpis.totalPayables.toFixed(2)],
+      ["Overdue Shipper Amount", kpis.overdueShipperAmount.toFixed(2)],
+      ["Overdue Carrier Amount", kpis.overdueCarrierAmount.toFixed(2)]
+    ];
+
+    const csvContent = [headers, ...rows, [], ...kpiRows]
+      .map(e => e.join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `TallyHauls_Report_${new Date().toISOString()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="dashboard-container p-4">
@@ -283,8 +333,8 @@ export default function Frontend({ userEmail }) {
       </header>
 
       <div className="quick-actions flex items-center gap-4 mb-4">
-        <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} ref={invoiceInputRef} />
-        <button className="qa-btn" onClick={() => alert("Download Report feature coming soon!")}>
+        <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} />
+        <button className="qa-btn" onClick={downloadReport}>
           Download Report
         </button>
         <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
@@ -295,3 +345,5 @@ export default function Frontend({ userEmail }) {
     </div>
   );
 }
+
+ 

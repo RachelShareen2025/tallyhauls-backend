@@ -35,34 +35,39 @@ export function calculateTotalPayables(rows) {
     .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
 }
 
-// ✅ Overdue calculations using shipper_due / carrier_due fields
-export function calculateOverdueShipperAmount(rows) {
-  const todayUTC = new Date(Date.UTC(
+// ✅ Normalize today's date in UTC (no time component)
+function getTodayUTC() {
+  return new Date(Date.UTC(
     new Date().getUTCFullYear(),
     new Date().getUTCMonth(),
     new Date().getUTCDate()
   ));
+}
+
+// ✅ Overdue calculations using shipper_due / carrier_due fields
+export function calculateOverdueShipperAmount(rows) {
+  const todayUTC = getTodayUTC();
 
   return rows.reduce((sum, r) => {
     if (!r.shipper_paid && r.shipper_due) {
-      const dueUTC = new Date(r.shipper_due + "T00:00:00Z");
-      if (todayUTC > dueUTC) return sum + Number(r.total_charge || 0);
+      const dueUTC = new Date(r.shipper_due);
+      if (!isNaN(dueUTC) && todayUTC > dueUTC) {
+        return sum + Number(r.total_charge || 0);
+      }
     }
     return sum;
   }, 0);
 }
 
 export function calculateOverdueCarrierAmount(rows) {
-  const todayUTC = new Date(Date.UTC(
-    new Date().getUTCFullYear(),
-    new Date().getUTCMonth(),
-    new Date().getUTCDate()
-  ));
+  const todayUTC = getTodayUTC();
 
   return rows.reduce((sum, r) => {
     if (!r.carrier_paid && r.carrier_due) {
-      const dueUTC = new Date(r.carrier_due + "T00:00:00Z");
-      if (todayUTC > dueUTC) return sum + Number(r.carrier_pay || 0);
+      const dueUTC = new Date(r.carrier_due);
+      if (!isNaN(dueUTC) && todayUTC > dueUTC) {
+        return sum + Number(r.carrier_pay || 0);
+      }
     }
     return sum;
   }, 0);
