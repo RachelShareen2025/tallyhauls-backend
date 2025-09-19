@@ -5,6 +5,14 @@ import Papa from "papaparse";
 /* -----------------------------
    1️⃣ KPI Calculations
 ----------------------------- */
+function getTodayUTC() {
+  return new Date(Date.UTC(
+    new Date().getUTCFullYear(),
+    new Date().getUTCMonth(),
+    new Date().getUTCDate()
+  ));
+}
+
 export function calculateProjectedNetCashFlow(rows) {
   const totalCharges = rows.reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
   const totalCarrierPay = rows.reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
@@ -35,19 +43,8 @@ export function calculateTotalPayables(rows) {
     .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
 }
 
-// ✅ Normalize today's date in UTC (no time component)
-function getTodayUTC() {
-  return new Date(Date.UTC(
-    new Date().getUTCFullYear(),
-    new Date().getUTCMonth(),
-    new Date().getUTCDate()
-  ));
-}
-
-// ✅ Overdue calculations using shipper_due / carrier_due fields
 export function calculateOverdueShipperAmount(rows) {
   const todayUTC = getTodayUTC();
-
   return rows.reduce((sum, r) => {
     if (!r.shipper_paid && r.shipper_due) {
       const dueUTC = new Date(r.shipper_due);
@@ -61,7 +58,6 @@ export function calculateOverdueShipperAmount(rows) {
 
 export function calculateOverdueCarrierAmount(rows) {
   const todayUTC = getTodayUTC();
-
   return rows.reduce((sum, r) => {
     if (!r.carrier_paid && r.carrier_due) {
       const dueUTC = new Date(r.carrier_due);
@@ -94,7 +90,7 @@ export async function insertInvoices(rows, fileUrl) {
     if (error) throw error;
     return { success: true };
   } catch (err) {
-    console.error("   DB insert failed:", err.message);
+    console.error("DB insert failed:", err.message);
     return { success: false, error: err.message };
   }
 }
@@ -103,7 +99,6 @@ export async function insertInvoices(rows, fileUrl) {
    3️⃣ Parse Invoice CSV
 ----------------------------- */
 const normalizeHeader = header => header?.trim().toLowerCase();
-
 const csvMap = {
   load_number: ["load id", "load #", "loadnumber", "loadnum", "loadno"],
   total_charge: ["total charge", "rate", "load rate", "amount", "rate$", "charge"],
@@ -112,11 +107,8 @@ const csvMap = {
   carrier: ["carrier", "trucking company", "transporter", "carrier name"],
   carrier_pay: ["carrier pay", "carrier amount", "carrier rate", "carrier$", "carrier_charge"]
 };
-
 const getCsvValue = (row, aliases) => {
-  for (let a of aliases) {
-    if (row[a] !== undefined && row[a] !== "") return row[a];
-  }
+  for (let a of aliases) if (row[a] !== undefined && row[a] !== "") return row[a];
   return null;
 };
 
@@ -135,7 +127,7 @@ export function parseInvoiceCSV(fileText) {
     const loadNumber = getCsvValue(row, csvMap.load_number)?.trim();
     if (!loadNumber) return { flagged_reason: "Missing load_number", ...row };
 
-    const parseNumber = (val) => {
+    const parseNumber = val => {
       if (!val) return 0;
       const cleaned = String(val).replace(/[^0-9.-]+/g, "");
       return parseFloat(cleaned) || 0;
@@ -145,16 +137,8 @@ export function parseInvoiceCSV(fileText) {
     const carrierPay = parseNumber(getCsvValue(row, csvMap.carrier_pay));
 
     let billDateRaw = getCsvValue(row, csvMap.bill_date);
-    let billDateFormatted = null;
-    let billDateObj = null;
-
-    if (billDateRaw) {
-      const parsedDate = new Date(billDateRaw);
-      if (!isNaN(parsedDate.getTime())) {
-        billDateObj = parsedDate;
-        billDateFormatted = parsedDate.toISOString().split("T")[0];
-      }
-    }
+    let billDateObj = billDateRaw ? new Date(billDateRaw) : null;
+    let billDateFormatted = billDateObj && !isNaN(billDateObj) ? billDateObj.toISOString().split("T")[0] : null;
 
     let flaggedReason = null;
     const today = new Date();
@@ -206,7 +190,7 @@ export async function uploadFileToStorage(file, brokerEmail, isFailed = false) {
 
     return { success: true, fileUrl: publicUrlData.publicUrl };
   } catch (err) {
-    console.error("   Storage upload failed:", err.message);
+    console.error("Storage upload failed:", err.message);
     return { success: false, error: err.message };
   }
 }
@@ -222,9 +206,8 @@ export async function uploadInvoiceFile(file, brokerEmail) {
 
     const fileText = await file.text();
     let parsedRows;
-    try {
-      parsedRows = parseInvoiceCSV(fileText);
-    } catch (err) {
+    try { parsedRows = parseInvoiceCSV(fileText); }
+    catch (err) {
       await uploadFileToStorage(file, brokerEmail, true);
       return { success: false, error: `CSV parsing failed: ${err.message}` };
     }
@@ -234,7 +217,7 @@ export async function uploadInvoiceFile(file, brokerEmail) {
 
     return { success: true, fileUrl: storageRes.fileUrl };
   } catch (err) {
-    console.error("   Upload failed:", err.message);
+    console.error("Upload failed:", err.message);
     return { success: false, error: err.message };
   }
 }
@@ -252,7 +235,7 @@ export async function updateInvoiceStatus(invoiceId, field, value) {
     if (error) throw error;
     return { success: true };
   } catch (err) {
-    console.error("   Update failed:", err.message);
+    console.error("Update failed:", err.message);
     return { success: false, error: err.message };
   }
 }
@@ -270,7 +253,7 @@ export async function bulkUpdateInvoiceStatus(invoiceIds, field, value) {
     if (error) throw error;
     return { success: true };
   } catch (err) {
-    console.error("    Bulk update failed:", err.message);
+    console.error("Bulk update failed:", err.message);
     return { success: false, error: err.message };
   }
 }
