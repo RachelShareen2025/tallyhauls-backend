@@ -197,72 +197,100 @@ export default function Frontend({ userEmail }) {
               </tr>
             </thead>
             <tbody>
-              {filteredInvoices.length === 0 && (
-                <tr>
-                  <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
-                    No invoices uploaded yet.
-                  </td>
-                </tr>
-              )}
+  {filteredInvoices.length === 0 && (
+    <tr>
+      <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
+        No invoices uploaded yet.
+      </td>
+    </tr>
+  )}
 
-              {filteredInvoices.map((inv) => {
-                const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
-                
-                const shipperTermsDisplay = inv.shipper_due
-                  ? `Net 30 - ${formatDue(inv.shipper_due)}`
-                  : "Net 30 - —";
+  {filteredInvoices.map((inv) => {
+    const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
+    
+    const shipperTermsDisplay = inv.shipper_due
+      ? `Net 30 - ${formatDue(inv.shipper_due)}`
+      : "Net 30 - —";
 
-                const carrierTermsDisplay = inv.carrier_due
-                  ? `Net 15 - ${formatDue(inv.carrier_due)}`
-                  : "Net 15 - —";
+    const carrierTermsDisplay = inv.carrier_due
+      ? `Net 15 - ${formatDue(inv.carrier_due)}`
+      : "Net 15 - —";
 
-                return (
-                  <tr key={inv.id} className={
-                      inv.flagged_reason && !(inv.shipper_paid && inv.carrier_paid) ? "row-flagged" : ""
-                    }>
-                    <td>{inv.load_number || "—"}</td>
-                    <td>{inv.bill_date ? formatDue(inv.bill_date) : "—"}</td>
-                    <td>{inv.shipper || "—"}</td>
-                    <td style={{ textAlign: "center" }}>{Number(inv.total_charge || 0).toFixed(2)}</td>
-                    <td>{shipperTermsDisplay}</td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={inv.shipper_paid || false}
-                        className={inv.shipper_paid ? "paid-green" : ""}
-                        onChange={() => handlePaidToggle(inv.id, "shipper_paid", inv.shipper_paid)}
-                      />
-                    </td>
-                    <td>{inv.carrier || "—"}</td>
-                    <td style={{ textAlign: "center" }}>
-                      {inv.carrier_pay !== null && inv.carrier_pay !== undefined
-                        ? Number(inv.carrier_pay).toFixed(2)
-                        : "—"}
-                    </td>
-                    <td>{carrierTermsDisplay}</td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={inv.carrier_paid || false}
-                        className={inv.carrier_paid ? "paid-green" : ""}
-                        onChange={() => handlePaidToggle(inv.id, "carrier_paid", inv.carrier_paid)}
-                      />
-                    </td>
-                    <td className="numeric">${netCash.toFixed(2)}</td>
-                    <td>{inv.flagged_reason || "—"}</td>
-                    <td>
-                      {inv.file_url ? (
-                        <a href={inv.file_url} target="_blank" rel="noreferrer">
-                          View
-                        </a>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
+    return (
+      <tr key={inv.id} className={
+          inv.flagged_reason && !(inv.shipper_paid && inv.carrier_paid) ? "row-flagged" : ""
+        }>
+        <td>{inv.load_number || "—"}</td>
+        <td>{inv.bill_date ? formatDue(inv.bill_date) : "—"}</td>
+        <td>{inv.shipper || "—"}</td>
+        <td style={{ textAlign: "center" }}>{Number(inv.total_charge || 0).toFixed(2)}</td>
+        <td>{shipperTermsDisplay}</td>
+        <td>
+          <input
+            type="checkbox"
+            checked={inv.shipper_paid || false}
+            className={inv.shipper_paid ? "paid-green" : ""}
+            onChange={() => handlePaidToggle(inv.id, "shipper_paid", inv.shipper_paid)}
+          />
+        </td>
+        <td>{inv.carrier || "—"}</td>
+        <td style={{ textAlign: "center" }}>
+          {inv.carrier_pay !== null && inv.carrier_pay !== undefined
+            ? Number(inv.carrier_pay).toFixed(2)
+            : "—"}
+        </td>
+        <td>{carrierTermsDisplay}</td>
+        <td>
+          <input
+            type="checkbox"
+            checked={inv.carrier_paid || false}
+            className={inv.carrier_paid ? "paid-green" : ""}
+            onChange={() => handlePaidToggle(inv.id, "carrier_paid", inv.carrier_paid)}
+          />
+        </td>
+        <td className="numeric">${netCash.toFixed(2)}</td>
+        <td>{inv.flagged_reason || "—"}</td>
+        <td>
+          {inv.file_url ? (
+            <a href={inv.file_url} target="_blank" rel="noreferrer">
+              View
+            </a>
+          ) : (
+            "—"
+          )}
+        </td>
+      </tr>
+    );
+  })}
+
+  {/* Totals row */}
+  {invoices.length > 0 && (
+    <tr style={{ fontWeight: "bold", backgroundColor: "#f9f9f9" }}>
+      <td colSpan="3" style={{ textAlign: "right" }}>Totals:</td>
+      <td style={{ textAlign: "center" }}>
+        ${invoices.reduce((sum, inv) => sum + (inv.total_charge || 0), 0).toFixed(2)}
+      </td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td style={{ textAlign: "center" }}>
+        ${invoices.reduce((sum, inv) => sum + (inv.carrier_pay || 0), 0).toFixed(2)}
+      </td>
+      <td></td>
+      <td></td>
+      <td className="numeric">
+        ${invoices.reduce((sum, inv) => sum + ((inv.total_charge || 0) - (inv.carrier_pay || 0)), 0).toFixed(2)}
+      </td>
+      <td>
+        ${kpis.overdueShipperAmount.toFixed(2)}
+      </td>
+      <td>
+        ${kpis.overdueCarrierAmount.toFixed(2)}
+      </td>
+    </tr>
+  )}
+</tbody>
+
           </table>
         </div>
       </div>
