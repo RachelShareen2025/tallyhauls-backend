@@ -39,28 +39,34 @@
 
 /* Logout Button */
 .logout-btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: var(--radius);
-  background-color: var(--brand-accent);
-  color: #fff;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  transition: background 0.2s ease, transform 0.1s ease;
+  padding: 10px 20px !important;
+  border: none !important;
+  border-radius: var(--radius) !important;
+  background-color: var(--brand-accent) !important; /* force the green */
+  color: #fff !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  transition: background 0.2s ease, transform 0.1s ease !important;
+  text-decoration: none !important;
+  text-align: center !important;
+  display: inline-block !important;
+  line-height: 1.2 !important;
 }
+
 
 .logout-btn:hover,
 .logout-btn:focus {
-  background-color: #2fb487;
-  transform: translateY(-1px);
-  outline: none;
+  background-color: #2fb487 !important; /* slightly darker green */
+  transform: translateY(-1px) !important;
+  outline: none !important;
 }
 
+
 .logout-btn:active {
-  transform: translateY(0px);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transform: translateY(0px) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
 }
 
 /* ---------- KPI Bar ---------- */
