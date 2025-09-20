@@ -362,7 +362,7 @@ export default function Frontend({ userEmail }) {
         <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       </div>
 
-      <NetCashSummary invoices={filteredInvoices || invoices} />
+      <NetCashSummary invoices={invoices} />
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
     </div>
   );
