@@ -85,8 +85,18 @@ export function computeKPIs(rows) {
 ----------------------------- */
 export async function insertInvoices(rows, fileUrl) {
   try {
-    const rowsWithFile = rows.map(row => ({ ...row, file_url: fileUrl }));
-    const { error } = await supabase.from("invoices").insert(rowsWithFile);
+    const rowsWithDueDates = rows.map(row => {
+      const billDateObj = row.bill_date ? new Date(row.bill_date) : null;
+
+      return {
+        ...row,
+        file_url: fileUrl,
+        shipper_due: row.shipper_due || (billDateObj ? new Date(billDateObj.getTime() + 30 * 86400000).toISOString().split("T")[0] : null),
+        carrier_due: row.carrier_due || (billDateObj ? new Date(billDateObj.getTime() + 15 * 86400000).toISOString().split("T")[0] : null),
+      };
+    });
+
+    const { error } = await supabase.from("invoices").insert(rowsWithDueDates);
     if (error) throw error;
     return { success: true };
   } catch (err) {
@@ -94,6 +104,7 @@ export async function insertInvoices(rows, fileUrl) {
     return { success: false, error: err.message };
   }
 }
+
 
 /* -----------------------------
    3️⃣ Parse Invoice CSV
