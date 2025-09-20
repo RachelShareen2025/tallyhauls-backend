@@ -282,31 +282,6 @@ export default function Frontend({ userEmail }) {
 
   {/* Totals row */}
  {/* Totals row */}
-{invoices.length > 0 && (
-  <tr style={{ fontWeight: "bold", backgroundColor: "#f9f9f9" }}>
-    <td colSpan="3" style={{ textAlign: "right"}}>Totals:</td>
-    <td style={{ textAlign: "center" }}>
-      ${filteredInvoices.reduce((sum, inv) => sum + (inv.total_charge || 0), 0).toFixed(2)}
-    </td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td style={{ textAlign: "center" }}>
-      ${filteredInvoices.reduce((sum, inv) => sum + (inv.carrier_pay || 0), 0).toFixed(2)}
-    </td>
-    <td></td>
-    <td></td>
-    <td className="numeric">
-      ${filteredInvoices.reduce((sum, inv) => sum + ((inv.total_charge || 0) - (inv.carrier_pay || 0)), 0).toFixed(2)}
-    </td>
-    <td>
-      ${filteredInvoices.reduce((sum, inv) => sum + ((inv.shipper_due && !inv.shipper_paid) ? (inv.total_charge || 0) : 0), 0).toFixed(2)}
-    </td>
-    <td>
-      ${filteredInvoices.reduce((sum, inv) => sum + ((inv.carrier_due && !inv.carrier_paid) ? (inv.carrier_pay || 0) : 0), 0).toFixed(2)}
-    </td>
-  </tr>
-)}
 
 </tbody>
 
