@@ -126,7 +126,7 @@ export default function Landing() {
           {msg && <p className="login-msg">{msg}</p>}
         </div>
         <div className="hero-right">
-          <img src="/Dashboard preview.png" alt="Dashboard preview" />
+        <img src={dashboardImg} alt="Dashboard preview" />
         </div>
       </section>
 
