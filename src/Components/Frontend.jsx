@@ -135,50 +135,33 @@ export default function Frontend({ userEmail }) {
     );
   };
 
-  const NetCashSummary = ({ invoices }) => {
-  if (!invoices || invoices.length === 0) return null;
+  const NetCashSummary = ({ kpis }) => {
+    if (!kpis) return null;
 
-  const projectedCashFlow = invoices.reduce((sum, inv) => sum + (inv.total_charge || 0), 0);
-  const actualCashFlow = invoices.reduce(
-    (sum, inv) => sum + ((inv.shipper_paid ? inv.total_charge : 0) - (inv.carrier_paid ? inv.carrier_pay : 0)),
-    0
-  );
-  const totalReceivables = invoices.reduce((sum, inv) => sum + (inv.total_charge || 0), 0);
-  const totalPayables = invoices.reduce((sum, inv) => sum + (inv.carrier_pay || 0), 0);
-  const overdueShipperAmount = invoices.reduce(
-    (sum, inv) => sum + ((inv.shipper_due && !inv.shipper_paid) ? (inv.total_charge || 0) : 0),
-    0
-  );
-  const overdueCarrierAmount = invoices.reduce(
-    (sum, inv) => sum + ((inv.carrier_due && !inv.carrier_paid) ? (inv.carrier_pay || 0) : 0),
-    0
-  );
+    const kpiList = [
+      { label: "Projected Net Cash Flow", value: kpis.projectedCashFlow, dot: "green" },
+      { label: "Actual Net Cash Flow", value: kpis.actualCashFlow, dot: "blue" },
+      { label: "Total Receivables", value: kpis.totalReceivables, dot: "amber" },
+      { label: "Total Payables", value: kpis.totalPayables, dot: "blue" },
+      { label: "Overdue Shipper Amount", value: kpis.overdueShipperAmount, dot: "red" },
+      { label: "Overdue Carrier Amount", value: kpis.overdueCarrierAmount, dot: "red" },
+    ];
 
-  const kpiList = [
-    { label: "Projected Net Cash Flow", value: projectedCashFlow, dot: "green" },
-    { label: "Actual Net Cash Flow", value: actualCashFlow, dot: "blue" },
-    { label: "Total Receivables", value: totalReceivables, dot: "amber" },
-    { label: "Total Payables", value: totalPayables, dot: "blue" },
-    { label: "Overdue Shipper Amount", value: overdueShipperAmount, dot: "red" },
-    { label: "Overdue Carrier Amount", value: overdueCarrierAmount, dot: "red" },
-  ];
-
-  return (
-    <div className="kpi-bar">
-      {kpiList.map((kpi) => (
-        <div className="kpi-card" key={kpi.label}>
-          <div className="kpi-top">
-            <span className={`dot dot-${kpi.dot}`}></span> {kpi.label}
+    return (
+      <div className="kpi-bar">
+        {kpiList.map((kpi) => (
+          <div className="kpi-card" key={kpi.label}>
+            <div className="kpi-top">
+              <span className={`dot dot-${kpi.dot}`}></span> {kpi.label}
+            </div>
+            <div className={`kpi-value ${kpi.value < 0 ? "negative" : ""}`}>
+              ${Number(kpi.value || 0).toFixed(2)}
+            </div>
           </div>
-          <div className={`kpi-value ${kpi.value < 0 ? "negative" : ""}`}>
-            ${Number(kpi.value || 0).toFixed(2)}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
+        ))}
+      </div>
+    );
+  };
 
   const InvoiceTable = ({ invoices, searchQuery }) => {
     if (!invoices) return null;
@@ -214,82 +197,78 @@ export default function Frontend({ userEmail }) {
               </tr>
             </thead>
             <tbody>
-  {filteredInvoices.length === 0 && (
-    <tr>
-      <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
-        No invoices uploaded yet.
-      </td>
-    </tr>
-  )}
+              {filteredInvoices.length === 0 && (
+                <tr>
+                  <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
+                    No invoices uploaded yet.
+                  </td>
+                </tr>
+              )}
 
-  {filteredInvoices.map((inv) => {
-    const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
-    
-    const shipperTermsDisplay = inv.shipper_due
-      ? `Net 30 - ${formatDue(inv.shipper_due)}`
-      : "Net 30 - —";
+              {filteredInvoices.map((inv) => {
+                const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
 
-    const carrierTermsDisplay = inv.carrier_due
-      ? `Net 15 - ${formatDue(inv.carrier_due)}`
-      : "Net 15 - —";
+                const shipperTermsDisplay = inv.shipper_due
+                  ? `Net 30 - ${formatDue(inv.shipper_due)}`
+                  : "Net 30 - —";
 
-    return (
-      <tr key={inv.id} className={
-          inv.flagged_reason && !(inv.shipper_paid && inv.carrier_paid) ? "row-flagged" : ""
-        }>
-        <td>{inv.load_number || "—"}</td>
-        <td>{inv.bill_date ? formatDue(inv.bill_date) : "—"}</td>
-        <td>{inv.shipper || "—"}</td>
-        <td style={{ textAlign: "center" }}>{Number(inv.total_charge || 0).toFixed(2)}</td>
-        <td>{shipperTermsDisplay}</td>
-        <td>
-          <input
-            type="checkbox"
-            checked={inv.shipper_paid || false}
-            className={inv.shipper_paid ? "paid-green" : ""}
-            onChange={() => handlePaidToggle(inv.id, "shipper_paid", inv.shipper_paid)}
-          />
-        </td>
-        <td>{inv.carrier || "—"}</td>
-        <td style={{ textAlign: "center" }}>
-          {inv.carrier_pay !== null && inv.carrier_pay !== undefined
-            ? Number(inv.carrier_pay).toFixed(2)
-            : "—"}
-        </td>
-        <td>{carrierTermsDisplay}</td>
-        <td>
-          <input
-            type="checkbox"
-            checked={inv.carrier_paid || false}
-            className={inv.carrier_paid ? "paid-green" : ""}
-            onChange={() => handlePaidToggle(inv.id, "carrier_paid", inv.carrier_paid)}
-          />
-        </td>
-        <td className="numeric">${netCash.toFixed(2)}</td>
-        <td>{inv.flagged_reason || "—"}</td>
-        <td>
-          {inv.file_url ? (
-            <a href={inv.file_url} target="_blank" rel="noreferrer">
-              View
-            </a>
-          ) : (
-            "—"
-          )}
-        </td>
-      </tr>
-    );
-  })}
+                const carrierTermsDisplay = inv.carrier_due
+                  ? `Net 15 - ${formatDue(inv.carrier_due)}`
+                  : "Net 15 - —";
 
-  {/* Totals row */}
- {/* Totals row */}
-
-</tbody>
-
+                return (
+                  <tr key={inv.id} className={
+                    inv.flagged_reason && !(inv.shipper_paid && inv.carrier_paid) ? "row-flagged" : ""
+                  }>
+                    <td>{inv.load_number || "—"}</td>
+                    <td>{inv.bill_date ? formatDue(inv.bill_date) : "—"}</td>
+                    <td>{inv.shipper || "—"}</td>
+                    <td style={{ textAlign: "center" }}>{Number(inv.total_charge || 0).toFixed(2)}</td>
+                    <td>{shipperTermsDisplay}</td>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={inv.shipper_paid || false}
+                        className={inv.shipper_paid ? "paid-green" : ""}
+                        onChange={() => handlePaidToggle(inv.id, "shipper_paid", inv.shipper_paid)}
+                      />
+                    </td>
+                    <td>{inv.carrier || "—"}</td>
+                    <td style={{ textAlign: "center" }}>
+                      {inv.carrier_pay !== null && inv.carrier_pay !== undefined
+                        ? Number(inv.carrier_pay).toFixed(2)
+                        : "—"}
+                    </td>
+                    <td>{carrierTermsDisplay}</td>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={inv.carrier_paid || false}
+                        className={inv.carrier_paid ? "paid-green" : ""}
+                        onChange={() => handlePaidToggle(inv.id, "carrier_paid", inv.carrier_paid)}
+                      />
+                    </td>
+                    <td className="numeric">${netCash.toFixed(2)}</td>
+                    <td>{inv.flagged_reason || "—"}</td>
+                    <td>
+                      {inv.file_url ? (
+                        <a href={inv.file_url} target="_blank" rel="noreferrer">
+                          View
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
           </table>
         </div>
       </div>
     );
   };
+
   // ======================
   // Download CSV / Report
   // ======================
@@ -320,7 +299,7 @@ export default function Frontend({ userEmail }) {
       escapeCSV(inv.file_url)
     ]);
 
-    // KPI summary block (Option B)
+    // KPI summary block
     const kpiRows = [
       ["", "", "KPIs"],
       ["Projected Net Cash Flow", kpis.projectedCashFlow.toFixed(2)],
@@ -362,10 +341,8 @@ export default function Frontend({ userEmail }) {
         <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       </div>
 
-      <NetCashSummary invoices={invoices} />
+      <NetCashSummary kpis={kpis} />
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
     </div>
   );
 }
-
- 
