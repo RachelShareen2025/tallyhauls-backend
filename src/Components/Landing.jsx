@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Landing.css";
 import { supabase } from "../supabaseClient";
+import dashboardImg from "./assets/Dashboard preview.png";
 
 export default function Landing() {
   const [email, setEmail] = useState("");
