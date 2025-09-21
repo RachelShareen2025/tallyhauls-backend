@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Landing from "./Components/Landing";
-import Auth from "./Components/Auth";
-import Frontend from "./Components/Frontend";
+import Landing from "./components/Landing";
+import Auth from "./components/Auth";
+import Frontend from "./components/Frontend";
 import { supabase } from "./supabaseClient";
+import PrivacyPolicy from "./components/PrivacyPolicy";
+import TermsOfService from "./components/TermsOfService";
+import RefundPolicy from "./components/RefundPolicy";
 
 // ProtectedRoute prevents remount flicker
 function ProtectedRoute({ session, children }) {
@@ -47,7 +50,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public landing page */}
         <Route path="/" element={<Landing />} />
+
+        {/* Protected dashboard routes */}
         <Route
           path="/auth"
           element={
@@ -64,6 +70,21 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/Dashboard"
+          element={
+            <ProtectedRoute session={session}>
+              <Frontend userEmail={session?.user?.email} />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Public legal pages */}
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/refund" element={<RefundPolicy />} />
+
+        {/* Fallback */}
         <Route path="*" element={<Landing />} />
       </Routes>
     </BrowserRouter>

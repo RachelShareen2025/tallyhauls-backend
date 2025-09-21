@@ -16,7 +16,7 @@ export default function Landing() {
       } = await supabase.auth.getSession();
 
       if (session) {
-        window.location.href = "/frontend"; // FIX: redirect to valid route
+        window.location.href = "/Dashboard"; // Updated path (keeps existing behavior)
       }
     };
 
@@ -26,7 +26,7 @@ export default function Landing() {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session) {
-          window.location.href = "/frontend"; // FIX: redirect to valid route
+          window.location.href = "/Dashboard"; // Updated path
         }
       }
     );
@@ -48,18 +48,23 @@ export default function Landing() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: "https://tallyhauls.com/",
+          // use origin so it works for localhost/staging/production
+          emailRedirectTo: `${window.location.origin}/Dashboard`,
         },
       });
 
       if (error) {
-        console.error("Supabase magic link error:", error.message);
-        setMsg("❌ Failed to send magic link. Try again.");
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Supabase magic link error:", error.message);
+        }
+        setMsg("❌ Failed to send magic link. Try again or contact support.");
       } else {
-        setMsg("✅ Magic link sent! Check your email.");
+        setMsg("✅ Magic link sent! Check your email (and spam folder).");
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Unexpected error:", err);
+      }
       setMsg("❌ Something went wrong. Try again.");
     } finally {
       setLoading(false);
@@ -114,19 +119,37 @@ export default function Landing() {
           <form onSubmit={handleMagicLink} className="hero-login-form">
             <input
               type="email"
-              placeholder="Enter your email"
+              placeholder="Enter your business email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
+              aria-label="Business email"
             />
-            <button type="submit" disabled={loading}>
+            <button
+              type="submit"
+              disabled={loading}
+              aria-label="Start 10-day free trial"
+            >
               {loading ? "Sending..." : content.hero.cta}
             </button>
           </form>
-          {msg && <p className="login-msg">{msg}</p>}
+
+          {/* small trust + compliance line */}
+          <p style={{ marginTop: 8, fontSize: 13, color: "#374151" }}>
+            No credit card required for the 10-day free trial. By starting the trial you agree to our{" "}
+            <a href="/terms" target="_blank" rel="noopener noreferrer">Terms</a> and{" "}
+            <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
+          </p>
+
+          {msg && (
+            <p className="login-msg" role="status" style={{ marginTop: 12 }}>
+              {msg}
+            </p>
+          )}
         </div>
         <div className="hero-right">
-        <img src={dashboardImg} alt="Dashboard preview" />
+          <img src={dashboardImg} alt="Dashboard preview" />
         </div>
       </section>
 
@@ -157,6 +180,11 @@ export default function Landing() {
       {/* Footer */}
       <footer className="landing-footer">
         <p>© 2025 TallyHauls. All rights reserved.</p>
+        <p className="legal-links">
+          <a href="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a> |{" "}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a> |{" "}
+          <a href="/refund" target="_blank" rel="noopener noreferrer">Refund Policy</a>
+        </p>
       </footer>
     </div>
   );

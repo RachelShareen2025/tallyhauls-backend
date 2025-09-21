@@ -222,7 +222,27 @@ body {
   color: #ffffff;
   font-size: 0.95rem;
   font-weight: 500;
+  line-height: 1.5;
 }
+
+.landing-footer .legal-links {
+  margin-top: 8px;
+  font-size: 0.85rem; /* slightly smaller than main footer text */
+  color: #cfcfcf;     /* lighter gray for contrast */
+}
+
+.landing-footer .legal-links a {
+  color: #cfcfcf;
+  text-decoration: none;
+  margin: 0 6px;
+  transition: color 0.2s ease;
+}
+
+.landing-footer .legal-links a:hover {
+  color: #ffffff; /* white on hover */
+  text-decoration: underline;
+}
+
 
 /* ===== Responsive ===== */
 @media (max-width: 900px) {
@@ -268,4 +288,43 @@ body {
   background-color: #16a34a !important; /* darker green hover */
   color: #fff !important;
   outline: none;
+}
+
+/* ==========================
+   Legal / Policy Pages Styles
+   ========================== */
+
+.legal-page-container {
+  max-width: 900px;      /* matches Landing content width */
+  margin: 0 auto;
+  padding: 60px 20px;    /* similar top/bottom spacing as Landing */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* match Landing */
+  color: #1a1a1a;       /* same text color as Landing body */
+  line-height: 1.7;
+}
+
+.legal-page-container h1,
+.legal-page-container h2,
+.legal-page-container h3 {
+  color: #111;           /* headings slightly darker */
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.legal-page-container p {
+  margin-bottom: 16px;
+}
+
+.legal-page-container a {
+  color: #4f46e5;       /* same CTA/primary color as Landing links */
+  text-decoration: underline;
+}
+
+.legal-page-container ul {
+  margin: 16px 0;
+  padding-left: 20px;
+}
+
+.legal-page-container li {
+  margin-bottom: 10px;
 }
