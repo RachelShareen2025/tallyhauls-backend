@@ -7,6 +7,7 @@ import {
   updateInvoiceStatus
 } from "../features/Backend";
 import "./Dashboard.css";
+import { getFlaggedReason } from "../features/flaggedReasons"
 
 export default function Frontend({ userEmail }) {
   const [invoices, setInvoices] = useState([]);
@@ -163,111 +164,113 @@ export default function Frontend({ userEmail }) {
     );
   };
 
-  const InvoiceTable = ({ invoices, searchQuery }) => {
-    if (!invoices) return null;
+const InvoiceTable = ({ invoices, searchQuery }) => {
+  if (!invoices) return null;
 
-    const filteredInvoices = invoices.filter((inv) =>
-      JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const filteredInvoices = invoices.filter((inv) =>
+    JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-    const formatDue = (date) => date ? new Date(date).toLocaleDateString() : "—";
+  const formatDue = (date) => date ? new Date(date).toLocaleDateString() : "—";
 
-    return (
-      <div className="card" style={{ margin: "0 24px 24px" }}>
-        <div className="card-head table-head flex justify-between items-center">
-          <h3>Invoices</h3>
-        </div>
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
+  return (
+    <div className="card" style={{ margin: "0 24px 24px" }}>
+      <div className="card-head table-head flex justify-between items-center">
+        <h3>Invoices</h3>
+      </div>
+      <div className="table-wrap">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Load #</th>
+              <th>Bill Date</th>
+              <th>Shipper</th>
+              <th>Load Rate ($)</th>
+              <th>Shipper Terms & Due</th>
+              <th>Shipper Paid</th>
+              <th>Carrier</th>
+              <th>Carrier Pay ($)</th>
+              <th>Carrier Terms & Due</th>
+              <th>Carrier Paid</th>
+              <th className="numeric">Net Cash</th>
+              <th>Flagged Reason</th>
+              <th>File</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredInvoices.length === 0 && (
               <tr>
-                <th>Load #</th>
-                <th>Bill Date</th>
-                <th>Shipper</th>
-                <th>Load Rate ($)</th>
-                <th>Shipper Terms & Due</th>
-                <th>Shipper Paid</th>
-                <th>Carrier</th>
-                <th>Carrier Pay ($)</th>
-                <th>Carrier Terms & Due</th>
-                <th>Carrier Paid</th>
-                <th className="numeric">Net Cash</th>
-                <th>Flagged Reason</th>
-                <th>File</th>
+                <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
+                  No invoices uploaded yet.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {filteredInvoices.length === 0 && (
-                <tr>
-                  <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
-                    No invoices uploaded yet.
+            )}
+
+            {filteredInvoices.map((inv) => {
+              const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
+              const shipperTermsDisplay = inv.shipper_due
+                ? `Net 30 - ${formatDue(inv.shipper_due)}`
+                : "Net 30 - —";
+              const carrierTermsDisplay = inv.carrier_due
+                ? `Net 15 - ${formatDue(inv.carrier_due)}`
+                : "Net 15 - —";
+
+              // ⚡ Calculate flagged reason dynamically
+              const flaggedReason = getFlaggedReason(inv);
+
+              // ⚡ Determine row class based on flagged reason
+              const rowClass = flaggedReason ? "row-flagged" : "";
+
+              return (
+                <tr key={inv.id} className={rowClass}>
+                  <td>{inv.load_number || "—"}</td>
+                  <td>{inv.bill_date ? formatDue(inv.bill_date) : "—"}</td>
+                  <td>{inv.shipper || "—"}</td>
+                  <td style={{ textAlign: "center" }}>{Number(inv.total_charge || 0).toFixed(2)}</td>
+                  <td>{shipperTermsDisplay}</td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={inv.shipper_paid || false}
+                      className={inv.shipper_paid ? "paid-green" : ""}
+                      onChange={() => handlePaidToggle(inv.id, "shipper_paid", inv.shipper_paid)}
+                    />
+                  </td>
+                  <td>{inv.carrier || "—"}</td>
+                  <td style={{ textAlign: "center" }}>
+                    {inv.carrier_pay !== null && inv.carrier_pay !== undefined
+                      ? Number(inv.carrier_pay).toFixed(2)
+                      : "—"}
+                  </td>
+                  <td>{carrierTermsDisplay}</td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={inv.carrier_paid || false}
+                      className={inv.carrier_paid ? "paid-green" : ""}
+                      onChange={() => handlePaidToggle(inv.id, "carrier_paid", inv.carrier_paid)}
+                    />
+                  </td>
+                  <td className="numeric">${netCash.toFixed(2)}</td>
+                  <td>{flaggedReason || "—"}</td>
+                  <td>
+                    {inv.file_url ? (
+                      <a href={inv.file_url} target="_blank" rel="noreferrer">
+                        View
+                      </a>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                 </tr>
-              )}
-
-              {filteredInvoices.map((inv) => {
-                const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
-
-                const shipperTermsDisplay = inv.shipper_due
-                  ? `Net 30 - ${formatDue(inv.shipper_due)}`
-                  : "Net 30 - —";
-
-                const carrierTermsDisplay = inv.carrier_due
-                  ? `Net 15 - ${formatDue(inv.carrier_due)}`
-                  : "Net 15 - —";
-
-                return (
-                  <tr key={inv.id} className={
-                    inv.flagged_reason && !(inv.shipper_paid && inv.carrier_paid) ? "row-flagged" : ""
-                  }>
-                    <td>{inv.load_number || "—"}</td>
-                    <td>{inv.bill_date ? formatDue(inv.bill_date) : "—"}</td>
-                    <td>{inv.shipper || "—"}</td>
-                    <td style={{ textAlign: "center" }}>{Number(inv.total_charge || 0).toFixed(2)}</td>
-                    <td>{shipperTermsDisplay}</td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={inv.shipper_paid || false}
-                        className={inv.shipper_paid ? "paid-green" : ""}
-                        onChange={() => handlePaidToggle(inv.id, "shipper_paid", inv.shipper_paid)}
-                      />
-                    </td>
-                    <td>{inv.carrier || "—"}</td>
-                    <td style={{ textAlign: "center" }}>
-                      {inv.carrier_pay !== null && inv.carrier_pay !== undefined
-                        ? Number(inv.carrier_pay).toFixed(2)
-                        : "—"}
-                    </td>
-                    <td>{carrierTermsDisplay}</td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={inv.carrier_paid || false}
-                        className={inv.carrier_paid ? "paid-green" : ""}
-                        onChange={() => handlePaidToggle(inv.id, "carrier_paid", inv.carrier_paid)}
-                      />
-                    </td>
-                    <td className="numeric">${netCash.toFixed(2)}</td>
-                    <td>{inv.flagged_reason || "—"}</td>
-                    <td>
-                      {inv.file_url ? (
-                        <a href={inv.file_url} target="_blank" rel="noreferrer">
-                          View
-                        </a>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   // ======================
   // Download CSV / Report
