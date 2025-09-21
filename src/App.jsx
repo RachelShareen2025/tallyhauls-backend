@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Landing from "./components/Landing";
+import Landing from './components/Landing.jsx';
 import Auth from "./components/Auth";
 import Frontend from "./components/Frontend";
 import { supabase } from "./supabaseClient";
