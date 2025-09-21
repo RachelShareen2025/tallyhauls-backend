@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./components/Landing";
-import Auth from "./components/Auth";
+import Auth from "./Auth";
 import Frontend from "./components/Frontend";
 import { supabase } from "./supabaseClient";
 import PrivacyPolicy from "./components/PrivacyPolicy";
