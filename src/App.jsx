@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Landing from "./components/Landing";
-import Auth from "./components/Auth";
-import Frontend from "./components/Frontend";
+import Landing from "./Components/Landing";
+import Auth from "./Components/Auth";
+import Frontend from "./Components/Frontend";
 import { supabase } from "./supabaseClient";
-import PrivacyPolicy from "./components/PrivacyPolicy";
-import TermsOfService from "./components/TermsOfService";
-import RefundPolicy from "./components/RefundPolicy";
+import PrivacyPolicy from "./Components/PrivacyPolicy";
+import TermsOfService from "./Components/TermsOfService";
+import RefundPolicy from "./Components/RefundPolicy";
 
 // ProtectedRoute prevents remount flicker
 function ProtectedRoute({ session, children }) {
