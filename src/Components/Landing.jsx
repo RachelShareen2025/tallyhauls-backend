@@ -105,12 +105,10 @@ export default function Landing() {
       <header className="landing-header">
         <img src="/logo.png" alt="TallyHauls Logo" className="landing-logo" />
         <nav className="landing-nav">
-          <a href="Features">Features</a>
-          <a href="Pricing">Pricing</a>
-          <a href="Contact">Contact</a>
-          <a href="/auth" className="cta-btn">
-            Get Started
-          </a>
+          <a href="#features">Features</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#contact">Contact</a>
+          <a href="/auth" className="cta-btn">Get Started</a>
         </nav>
       </header>
 
@@ -169,7 +167,7 @@ export default function Landing() {
       </section>
 
       {/* Payback Section */}
-      <section className="Pricing-section" id="Pricing">
+      <section className="pricing-section" id="pricing">
         <div className="roi-card">
           <h2>The Math That Actually Matters</h2>
           <p className="roi-copy">
