@@ -5,7 +5,7 @@ export default function RefundPolicy() {
   return (
     <div className="landing-container" style={{ padding: "80px 60px" }}>
       <h1>Refund Policy – TallyHauls</h1>
-      <p><strong>Effective Date:</strong> [Insert Date]</p>
+      <p><strong>Effective Date:</strong> [09/22/2025]</p>
 
       <h2>Eligibility</h2>
       <ul>

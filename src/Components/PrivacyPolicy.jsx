@@ -5,7 +5,7 @@ export default function PrivacyPolicy() {
   return (
     <div className="landing-container" style={{ padding: "80px 60px" }}>
       <h1>Privacy Policy – TallyHauls</h1>
-      <p><strong>Effective Date:</strong> [Insert Date]</p>
+      <p><strong>Effective Date:</strong> [09/22/2025]</p>
 
       <h2>Introduction</h2>
       <p>TallyHauls values your privacy. This Privacy Policy explains how we collect, use, and protect your personal information when you use our freight cash-forecasting SaaS platform.</p>
