@@ -105,9 +105,9 @@ export default function Landing() {
       <header className="landing-header">
         <img src="/logo.png" alt="TallyHauls Logo" className="landing-logo" />
         <nav className="landing-nav">
-          <a href="#features">Features</a>
-          <a href="#payback">Payback</a>
-          <a href="#contact">Contact</a>
+          <a href="Features">Features</a>
+          <a href="Pricing">Pricing</a>
+          <a href="Contact">Contact</a>
           <a href="/auth" className="cta-btn">
             Get Started
           </a>
