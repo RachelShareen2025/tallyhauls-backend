@@ -406,12 +406,12 @@ body {
 .legal-page-container h2,
 .legal-page-container h3 {
   color: #111;
-  margin-bottom: 16px; /* slightly tighter */
+  margin-bottom: 16px;
   font-weight: 600;
 }
 
 .legal-page-container p {
-  margin-bottom: 14px; /* clean spacing */
+  margin-bottom: 14px;
   font-size: 1rem;
 }
 
@@ -423,11 +423,16 @@ body {
 .legal-page-container ul {
   margin: 16px 0;
   padding-left: 20px;
-  list-style: disc; /* standard bullet points */
+  list-style: disc;   /* standard bullet points */
+  display: block;     /* vertical, line-by-line */
 }
 
 .legal-page-container li {
   margin-bottom: 10px;
   font-size: 1rem;
   line-height: 1.5;
+  background: none;   /* remove background */
+  padding: 0;         /* remove padding */
+  border-radius: 0;   /* remove rounding */
+  box-shadow: none;   /* remove shadows */
 }
