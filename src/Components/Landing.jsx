@@ -77,19 +77,24 @@ export default function Landing() {
     },
     features: [
       {
-        title: "Project Cash 30 / 60 / 90 Days",
+        title: "See Your Cash Runway — Fast",
         description:
-          "Upload invoices and instantly see a cash timeline: expected inflows, carrier payouts, and net position so you can plan moves before the gap becomes a crisis.",
+          "Upload invoice CSVs and get an instant read of projected cash in and cash out by due-date. Know whether you can fund carrier pay this week — no spreadsheets needed.",
       },
       {
-        title: "Spot Cash At Risk — Fast",
+        title: "Stop Guessing. Avoid Costly Advances.",
         description:
-          "Automatically flag slow-paying shippers, overdue carriers, and concentration risks so you can act early and protect margins.",
+          "TallyHauls highlights overdue shippers and overdue carriers separately so you understand incoming risk vs outgoing liability — the two numbers that determine whether you need a factor or not.",
       },
       {
-        title: "Leverage Working Capital (Without Factoring)",
+        title: "Flag Problems Instantly",
         description:
-          "Know exactly how much cash is collectible and when — use that clarity to negotiate better terms, take more loads, and avoid expensive advances.",
+          "Rows turn red for overdue or missing data. Flag reasons (Missing Load #, Missing Date, Missing Amount, Parsing Error) give action items, not cryptic errors.",
+      },
+      {
+        title: "Keep Carriers Paid, Keep Loads Moving",
+        description:
+          "Pay carriers on time; prevent relationship damage. Less emergency factoring, better lanes, better margins.",
       },
     ],
   };
@@ -101,7 +106,7 @@ export default function Landing() {
         <img src="/logo.png" alt="TallyHauls Logo" className="landing-logo" />
         <nav className="landing-nav">
           <a href="#features">Features</a>
-          <a href="#roi">ROI</a>
+          <a href="#payback">Payback</a>
           <a href="#contact">Contact</a>
           <a href="/auth" className="cta-btn">
             Get Started
@@ -146,7 +151,6 @@ export default function Landing() {
           )}
         </div>
         <div className="hero-right">
-          {/* Replace this image with a cash-forecasting dashboard mock (same filename or update import) */}
           <img src={dashboardImg} alt="Cash forecasting dashboard preview" />
         </div>
       </section>
@@ -164,13 +168,13 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ROI Callout */}
-      <section className="roi-section" id="roi">
+      {/* Payback Section */}
+      <section className="payback-section" id="payback">
         <div className="roi-card">
-          <h2>Forecasting ROI — The math that brokers actually care about</h2>
+          <h2>Payback — The math that brokers actually care about</h2>
           <p className="roi-copy">
-            Brokers commonly lose <strong>$2,000+</strong> per month to timing gaps, late fees, and missed opportunities.
-            TallyHauls starts at <strong>$199/month</strong>. Catch one late payment or avoid one expensive cash advance and the tool has paid for itself.
+            Brokers lose <strong>$2,000+</strong> per month in hidden cash flow gaps and late fees.
+            TallyHauls costs <strong>$199/month</strong>. One late shipper payment caught = tool pays for itself.
           </p>
           <div style={{ marginTop: 18 }}>
             <a href="/auth" className="cta-btn" aria-label="Start free trial">

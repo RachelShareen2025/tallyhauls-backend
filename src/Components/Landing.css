@@ -39,22 +39,21 @@ body {
 }
 
 .landing-nav a:hover {
-  color: #33c898; /* brand green on hover */
+  color: #33c898;
 }
 
 /* ✅ Updated CTA Button */
 .cta-btn {
-  background-color: #33c898; /* brand green */
-  color: #fff;              /* white text */
+  background-color: #33c898;
+  color: #fff;
   padding: 10px 20px;
   border-radius: 8px;
   font-weight: 600;
-  transition:  background 0.2s ease;
+  transition: background 0.2s ease;
 }
 
 .cta-btn:hover {
-  background-color: #16a34a; /* darker green hover */
-  color: #fff;
+  background-color: #16a34a;
 }
 
 /* ===== Hero Section ===== */
@@ -169,8 +168,8 @@ body {
   font-size: 1rem;
 }
 
-/* ===== ROI Section (new) ===== */
-.roi-section {
+/* ===== Payback Section ===== */
+.payback-section {
   padding: 60px 60px;
   background: #ffffff;
   text-align: center;
@@ -197,7 +196,7 @@ body {
   line-height: 1.5;
 }
 
-/* ===== Trust Section (new) ===== */
+/* ===== Trust Section ===== */
 .trust-section {
   padding: 36px 60px;
   background: #f9f9f9;
@@ -287,8 +286,8 @@ body {
 
 .landing-footer .legal-links {
   margin-top: 8px;
-  font-size: 0.85rem; /* slightly smaller than main footer text */
-  color: #cfcfcf;     /* lighter gray for contrast */
+  font-size: 0.85rem;
+  color: #cfcfcf;
 }
 
 .landing-footer .legal-links a {
@@ -299,7 +298,7 @@ body {
 }
 
 .landing-footer .legal-links a:hover {
-  color: #ffffff; /* white on hover */
+  color: #ffffff;
   text-decoration: underline;
 }
 
@@ -337,22 +336,22 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
 /* Force CTA button colors */
 .landing-header .cta-btn {
-  background-color: #33c898 !important; /* brand green */
-  color: #fff !important;               /* white text */
+  background-color: #33c898 !important;
+  color: #fff !important;
   font-weight: 600;
   padding: 10px 20px;
   border-radius: 8px;
-  text-decoration: none;                /* removes underline */
+  text-decoration: none;
   transition: background 0.2s ease;
 }
 
-/* Hover / Focus / Active */
 .landing-header .cta-btn:hover,
 .landing-header .cta-btn:focus,
 .landing-header .cta-btn:active {
-  background-color: #16a34a !important; /* darker green hover */
+  background-color: #16a34a !important;
   color: #fff !important;
   outline: none;
 }
@@ -362,18 +361,18 @@ body {
    ========================== */
 
 .legal-page-container {
-  max-width: 900px;      /* matches Landing content width */
+  max-width: 900px;
   margin: 0 auto;
-  padding: 60px 20px;    /* similar top/bottom spacing as Landing */
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* match Landing */
-  color: #1a1a1a;       /* same text color as Landing body */
+  padding: 60px 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #1a1a1a;
   line-height: 1.7;
 }
 
 .legal-page-container h1,
 .legal-page-container h2,
 .legal-page-container h3 {
-  color: #111;           /* headings slightly darker */
+  color: #111;
   margin-bottom: 20px;
   font-weight: 600;
 }
@@ -383,7 +382,7 @@ body {
 }
 
 .legal-page-container a {
-  color: #4f46e5;       /* same CTA/primary color as Landing links */
+  color: #4f46e5;
   text-decoration: underline;
 }
 
