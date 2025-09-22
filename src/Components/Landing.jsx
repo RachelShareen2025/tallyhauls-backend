@@ -169,12 +169,11 @@ export default function Landing() {
       </section>
 
       {/* Payback Section */}
-      <section className="payback-section" id="payback">
+      <section className="payback-section" id="Pricing">
         <div className="roi-card">
-          <h2>Payback — The math that brokers actually care about</h2>
+          <h2>The Math That Actually Matters</h2>
           <p className="roi-copy">
-            Brokers lose <strong>$2,000+</strong> per month in hidden cash flow gaps and late fees.
-            TallyHauls costs <strong>$199/month</strong>. One late shipper payment caught = tool pays for itself.
+            Brokers lose <strong>$2,000+</strong> per month in hidden cash flow gaps and late fees. TallyHauls costs <strong>$199/month</strong>. Even catching one late shipper payment covers the tool’s cost.
           </p>
           <div style={{ marginTop: 18 }}>
             <a href="/auth" className="cta-btn" aria-label="Start free trial">
