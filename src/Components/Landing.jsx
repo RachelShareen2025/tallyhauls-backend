@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./Landing.css";
 import { supabase } from "../supabaseClient";
 import dashboardImg from "./assets/Dashboard preview.png";
+import { Link } from "react-scroll";
 
 export default function Landing() {
   const [email, setEmail] = useState("");
@@ -105,12 +106,10 @@ export default function Landing() {
       <header className="landing-header">
         <img src="/logo.png" alt="TallyHauls Logo" className="landing-logo" />
         <nav className="landing-nav">
-          <a href="Features">Features</a>
-          <a href="Pricing">Pricing</a>
-          <a href="Contact">Contact</a>
-          <a href="/auth" className="cta-btn">
-            Get Started
-          </a>
+          <Link to="features" smooth={true} offset={-80}>Features</Link>
+          <Link to="pricing" smooth={true} offset={-80}>Pricing</Link>
+          <Link to="contact" smooth={true} offset={-80}>Contact</Link>
+          <a href="/auth" className="cta-btn">Get Started</a>
         </nav>
       </header>
 
@@ -168,8 +167,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Payback Section */}
-      <section className="Pricing-section" id="Pricing">
+      {/* Payback / Pricing Section */}
+      <section className="pricing-section" id="pricing">
         <div className="roi-card">
           <h2>The Math That Actually Matters</h2>
           <p className="roi-copy">
