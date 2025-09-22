@@ -386,22 +386,13 @@ body {
 
 /* OVERRIDE any .landing-container flex for legal pages */
 .legal-page-container ul {
-  display: block !important;
-  flex: none !important;
-  padding-left: 20px !important;
-  margin: 16px 0 !important;
-  list-style: disc !important;
+  margin: 16px 0;
+  padding-left: 1.2em;  /* neat bullet indentation */
+  list-style: disc;      /* standard bullet */
 }
 
-.legal-page-container ul li {
-  display: list-item !important;
-  background: none !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  flex: none !important;
-  text-align: left !important;
+.legal-page-container li {
   margin-bottom: 10px;
-  line-height: 1.5;
   font-size: 1rem;
+  line-height: 1.5;
 }
