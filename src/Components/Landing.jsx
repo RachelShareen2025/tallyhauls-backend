@@ -169,7 +169,7 @@ export default function Landing() {
       </section>
 
       {/* Payback Section */}
-      <section className="payback-section" id="Pricing">
+      <section className="Pricing-section" id="Pricing">
         <div className="roi-card">
           <h2>The Math That Actually Matters</h2>
           <p className="roi-copy">
