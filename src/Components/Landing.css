@@ -302,6 +302,34 @@ body {
   text-decoration: underline;
 }
 
+/* ===== Horizontal Points / List Alignment for Terms, Privacy, Refund ===== */
+.landing-container ul {
+  display: flex;
+  flex-wrap: wrap;         
+  gap: 12px 40px;           /* tighter vertical spacing */
+  list-style: none;        
+  padding: 0;
+  margin: 16px 0;          
+}
+
+.landing-container ul li {
+  background: #f3f7fa;    
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #2d3959;
+  flex: 1 1 200px;         
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  word-break: break-word;
+  transition: all 0.2s ease;
+}
+
+.landing-container ul li:hover {
+  background-color: #e1f0f5;
+  transform: translateY(-2px);
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 900px) {
   .hero-section {
@@ -335,6 +363,15 @@ body {
   .trust-grid {
     grid-template-columns: 1fr;
   }
+
+  .landing-container ul {
+    flex-direction: column;  
+    gap: 12px;
+  }
+
+  .landing-container ul li {
+    flex: 1 1 100%;
+  }
 }
 
 /* Force CTA button colors */
@@ -359,7 +396,6 @@ body {
 /* ==========================
    Legal / Policy Pages Styles
    ========================== */
-
 .legal-page-container {
   max-width: 900px;
   margin: 0 auto;

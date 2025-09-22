@@ -77,7 +77,7 @@ export default function Landing() {
     },
     features: [
       {
-        title: "See Your Cash Runway — Fast",
+        title: "See Your Cash Runway Fast",
         description:
           "Upload invoice CSVs and get an instant read of projected cash in and cash out by due-date. Know whether you can fund carrier pay this week — no spreadsheets needed.",
       },
@@ -197,7 +197,7 @@ export default function Landing() {
           </div>
           <div className="trust-item">
             <h3>Built for Brokers</h3>
-            <p>Designed around real broker workflows: invoices, pickups, settlements, and cash timing.</p>
+            <p>Designed around real broker workflows: invoices, Shipments, settlements, and cash timing.</p>
           </div>
         </div>
       </section>
