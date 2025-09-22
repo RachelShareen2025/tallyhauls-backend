@@ -228,6 +228,14 @@ body {
   color: #2d3959;
   font-size: 0.98rem;
 }
+.trust-item h3,
+.trust-item p {
+  margin: 0 0 10px 0;
+}
+
+.trust-item p:last-child {
+  margin-bottom: 0;
+}
 
 /* ===== Contact Section ===== */
 .contact-section {
@@ -385,13 +393,11 @@ body {
   text-decoration: underline;
 }
 
-/* OVERRIDE any .landing-container flex for legal pages */
 .legal-page-container ul {
   margin: 16px 0;
-  padding-left: 20px;          /* indentation */
-  list-style: disc inside;     /* key change: bullet moves inside */
+  padding-left: 1.5em;      /* indentation fix */
+  list-style-type: disc;    /* clean bullet */
 }
-
 
 .legal-page-container li {
   margin-bottom: 10px;
