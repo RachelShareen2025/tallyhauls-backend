@@ -5,7 +5,7 @@ export default function TermsOfService() {
   return (
     <div className="landing-container" style={{ padding: "80px 60px" }}>
       <h1>Terms of Service – TallyHauls</h1>
-      <p><strong>Effective Date:</strong> [Insert Date]</p>
+      <p><strong>Effective Date:</strong> [09/22/2025]</p>
 
       <h2>Introduction</h2>
       <p>By using TallyHauls, you agree to these Terms of Service. These terms govern your access to and use of our cash-forecasting SaaS platform.</p>
