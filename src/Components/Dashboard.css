@@ -159,7 +159,16 @@
 input[type="checkbox"].paid-green { accent-color: var(--brand-accent); }
 
 /* Flagged Row */
-.row-flagged { background: #ffeaea; }
+/* Enhanced flagged row styling */
+.row-flagged {
+  background-color: #ffe5e5 !important; /* slightly lighter red */
+  color: #b00020; /* dark red text */
+  font-weight: 500; /* make text stand out */
+}
+
+.row-flagged input[type="checkbox"] {
+  accent-color: #b00020; /* red checkboxes */
+}
 
 /* ---------- Quick Actions + Search ---------- */
 .quick-actions {
