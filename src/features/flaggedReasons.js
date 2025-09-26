@@ -33,8 +33,11 @@ export function getFlaggedReason(row, allInvoices = []) {
   if (!isNaN(totalCharge) && !isNaN(carrierPay) && (totalCharge - carrierPay) <= 0)
     issues.push("Net Cash <= 0");
 
-  if (allInvoices.length > 0) {
-    const duplicateCount = allInvoices.filter(inv => inv.load_number === row.load_number).length;
+  // Duplicate detection per broker
+  if (allInvoices.length > 0 && row.broker_email) {
+    const duplicateCount = allInvoices.filter(
+      inv => inv.load_number === row.load_number && inv.broker_email === row.broker_email
+    ).length;
     if (duplicateCount > 1) issues.push("Duplicate Load #");
   }
 
