@@ -1,19 +1,17 @@
 // src/Components/Frontend.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import {
   uploadInvoiceFile,
   computeKPIs,
   updateInvoiceStatus
 } from "../features/Backend";
+import { getFlaggedReason } from "../features/flaggedReasons";
 import "./Dashboard.css";
-import { getFlaggedReason } from "../features/flaggedReasons"
 
 export default function Frontend({ userEmail }) {
   const [invoices, setInvoices] = useState([]);
-  const [kpis, setKpis] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
-  const [loadNumberCount, setLoadNumberCount] = useState({}); // for duplicate detection
 
   // Fetch invoices
   const fetchInvoices = async () => {
@@ -34,15 +32,6 @@ export default function Frontend({ userEmail }) {
         shipper_paid: !!inv.shipper_paid,
         carrier_paid: !!inv.carrier_paid
       }));
-
-      // Precompute load number counts for duplicate detection
-      const countMap = {};
-      normalizedData.forEach(inv => {
-        const ln = inv.load_number;
-        if (ln) countMap[ln] = (countMap[ln] || 0) + 1;
-      });
-
-      setLoadNumberCount(countMap);
       setInvoices(normalizedData);
     }
   };
@@ -51,21 +40,35 @@ export default function Frontend({ userEmail }) {
     fetchInvoices();
   }, []);
 
-  // Recompute KPIs whenever invoices change
-  useEffect(() => {
-    if (invoices.length > 0) {
-      setKpis(computeKPIs(invoices));
-    } else {
-      setKpis({
-        projectedCashFlow: 0,
-        actualCashFlow: 0,
-        totalReceivables: 0,
-        totalPayables: 0,
-        overdueShipperAmount: 0,
-        overdueCarrierAmount: 0
-      });
-    }
+  // Memoized KPIs
+  const kpis = useMemo(() => {
+    return invoices.length > 0 ? computeKPIs(invoices) : {
+      projectedCashFlow: 0,
+      actualCashFlow: 0,
+      totalReceivables: 0,
+      totalPayables: 0,
+      overdueShipperAmount: 0,
+      overdueCarrierAmount: 0
+    };
   }, [invoices]);
+
+  // Precompute flagged reasons per broker
+  const flaggedReasonMap = useMemo(() => {
+    const map = {};
+    const brokerInvoices = invoices.filter(inv => inv.broker_email === userEmail);
+    const loadNumberCount = {};
+
+    brokerInvoices.forEach(inv => {
+      const ln = inv.load_number;
+      if (ln) loadNumberCount[ln] = (loadNumberCount[ln] || 0) + 1;
+    });
+
+    brokerInvoices.forEach(inv => {
+      map[inv.id] = getFlaggedReason(inv, brokerInvoices);
+    });
+
+    return map;
+  }, [invoices, userEmail]);
 
   // Logout
   const handleLogout = async () => {
@@ -74,7 +77,7 @@ export default function Frontend({ userEmail }) {
   };
 
   // Refresh invoice list after upload
-  const handleInvoiceUpload = async (file) => {
+  const handleInvoiceUpload = async () => {
     await fetchInvoices();
   };
 
@@ -118,7 +121,7 @@ export default function Frontend({ userEmail }) {
         const result = await uploadInvoiceFile(file, brokerEmail);
         if (result.success) {
           setStatus("✅ Uploaded successfully!");
-          if (onUpload) onUpload(file);
+          if (onUpload) onUpload();
         } else {
           setStatus(`❌ Upload failed: ${result.error}`);
         }
@@ -225,10 +228,9 @@ export default function Frontend({ userEmail }) {
                   ? `Net 15 - ${formatDue(inv.carrier_due)}`
                   : "Net 15 - —";
 
-                // ⚡ Calculate flagged reason dynamically with duplicate detection
-                const flaggedReason = getFlaggedReason(inv, invoices);
+                // ⚡ Use memoized flagged reason
+                const flaggedReason = flaggedReasonMap[inv.id];
 
-                // ⚡ Determine row class based on flagged reason
                 const rowClass = flaggedReason ? "row-flagged" : "";
 
                 return (
@@ -247,11 +249,7 @@ export default function Frontend({ userEmail }) {
                       />
                     </td>
                     <td>{inv.carrier || "—"}</td>
-                    <td style={{ textAlign: "center" }}>
-                      {inv.carrier_pay !== null && inv.carrier_pay !== undefined
-                        ? Number(inv.carrier_pay).toFixed(2)
-                        : "—"}
-                    </td>
+                    <td style={{ textAlign: "center" }}>{Number(inv.carrier_pay || 0).toFixed(2)}</td>
                     <td>{carrierTermsDisplay}</td>
                     <td>
                       <input
@@ -265,12 +263,8 @@ export default function Frontend({ userEmail }) {
                     <td>{flaggedReason || "—"}</td>
                     <td>
                       {inv.file_url ? (
-                        <a href={inv.file_url} target="_blank" rel="noreferrer">
-                          View
-                        </a>
-                      ) : (
-                        "—"
-                      )}
+                        <a href={inv.file_url} target="_blank" rel="noreferrer">View</a>
+                      ) : "—"}
                     </td>
                   </tr>
                 );
@@ -291,28 +285,33 @@ export default function Frontend({ userEmail }) {
     const escapeCSV = (text) => `"${String(text || "").replace(/"/g, '""')}"`;
 
     const headers = [
-      "Load #", "Bill Date", "Shipper", "Load Rate ($)", "Shipper Terms & Due",
-      "Shipper Paid", "Carrier", "Carrier Pay ($)", "Carrier Terms & Due",
-      "Carrier Paid", "Net Cash", "Flagged Reason", "File"
+      "Load #","Bill Date","Shipper","Load Rate ($)","Shipper Terms & Due",
+      "Shipper Paid","Carrier","Carrier Pay ($)","Carrier Terms & Due",
+      "Carrier Paid","Net Cash","Flagged Reason","File"
     ];
 
-    const rows = invoices.map(inv => [
-      escapeCSV(inv.load_number),
-      escapeCSV(inv.bill_date ? new Date(inv.bill_date).toLocaleDateString() : ""),
-      escapeCSV(inv.shipper),
-      (inv.total_charge || 0).toFixed(2),
-      escapeCSV(`Net 30 - ${inv.shipper_due ? new Date(inv.shipper_due).toLocaleDateString() : ""}`),
-      inv.shipper_paid ? "Yes" : "No",
-      escapeCSV(inv.carrier),
-      (inv.carrier_pay || 0).toFixed(2),
-      escapeCSV(`Net 15 - ${inv.carrier_due ? new Date(inv.carrier_due).toLocaleDateString() : ""}`),
-      inv.carrier_paid ? "Yes" : "No",
-      ((inv.total_charge || 0) - (inv.carrier_pay || 0)).toFixed(2),
-      escapeCSV(getFlaggedReason(inv, invoices) || ""),   // ✅ Dynamic Flagged Reason
-      escapeCSV(inv.file_url)                               // ✅ File column
-    ]);
+    const lines = [headers.join(",")];
 
-    // KPI summary block
+    invoices.forEach(inv => {
+      const netCash = (inv.total_charge ?? 0) - (inv.carrier_pay ?? 0);
+      const flaggedReason = flaggedReasonMap[inv.id] ?? "";
+      lines.push([
+        escapeCSV(inv.load_number),
+        escapeCSV(inv.bill_date ? inv.bill_date.toISOString().split("T")[0] : ""),
+        escapeCSV(inv.shipper),
+        (inv.total_charge ?? 0).toFixed(2),
+        escapeCSV(`Net 30 - ${inv.shipper_due ? inv.shipper_due.toISOString().split("T")[0] : ""}`),
+        inv.shipper_paid ? "Yes" : "No",
+        escapeCSV(inv.carrier),
+        (inv.carrier_pay ?? 0).toFixed(2),
+        escapeCSV(`Net 15 - ${inv.carrier_due ? inv.carrier_due.toISOString().split("T")[0] : ""}`),
+        inv.carrier_paid ? "Yes" : "No",
+        netCash.toFixed(2),
+        escapeCSV(flaggedReason),
+        escapeCSV(inv.file_url)
+      ].join(","));
+    });
+
     const kpiRows = [
       ["", "", "KPIs"],
       ["Projected Net Cash Flow", kpis.projectedCashFlow.toFixed(2)],
@@ -322,35 +321,28 @@ export default function Frontend({ userEmail }) {
       ["Overdue Shipper Amount", kpis.overdueShipperAmount.toFixed(2)],
       ["Overdue Carrier Amount", kpis.overdueCarrierAmount.toFixed(2)]
     ];
+    kpiRows.forEach(r => lines.push(r.join(",")));
 
-    const csvContent = [headers, ...rows, [], ...kpiRows]
-      .map(e => e.join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(lines, { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `TallyHauls_Report_${new Date().toISOString()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement("a");
+    a.href = url;
+    a.setAttribute("download", `TallyHauls_Report_${new Date().toISOString()}.csv`);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (
     <div className="dashboard-container p-4">
       <header className="dashboard-header flex justify-between items-center mb-4">
         <img src="/logo.png" alt="TallyHauls" className="logo h-10" />
-        <button className="logout-btn" onClick={handleLogout}>
-          Logout
-        </button>
+        <button className="logout-btn" onClick={handleLogout}>Logout</button>
       </header>
 
       <div className="quick-actions flex items-center gap-4 mb-4">
         <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} />
-        <button className="qa-btn" onClick={downloadReport}>
-          Download Report
-        </button>
+        <button className="qa-btn" onClick={downloadReport}>Download Report</button>
         <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       </div>
 
