@@ -90,7 +90,7 @@ export async function insertInvoices(rows, fileUrl, brokerEmail) {
 
       return {
         ...row,
-        broker_email: row.broker_email || brokerEmail, // ✅ attach broker email
+        broker_email: row.broker_email || brokerEmail,
         file_url: fileUrl,
         shipper_due: row.shipper_due || (billDateObj ? new Date(billDateObj.getTime() + 30 * 86400000).toISOString().split("T")[0] : null),
         carrier_due: row.carrier_due || (billDateObj ? new Date(billDateObj.getTime() + 15 * 86400000).toISOString().split("T")[0] : null),
@@ -145,12 +145,12 @@ export async function uploadInvoiceFile(file, brokerEmail) {
     const fileText = await file.text();
     let parsedRows;
     try {
-      parsedRows = parseInvoiceCSV(fileText);
+      parsedRows = parseInvoiceCSV(fileText, brokerEmail);
       // ✅ attach broker_email to every row if parser doesn't already
       parsedRows = parsedRows.map(row => ({ ...row, broker_email: brokerEmail }));
     } catch (err) {
       await uploadFileToStorage(file, brokerEmail, true);
-      return { success: false, error: `CSV parsing failed: ${err.message}` };
+      return { success: false, error: `CSV parsing failed. Please check columns.` };
     }
 
     const dbRes = await insertInvoices(parsedRows, storageRes.fileUrl, brokerEmail);

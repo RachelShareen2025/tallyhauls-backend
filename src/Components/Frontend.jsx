@@ -12,13 +12,14 @@ import "./Dashboard.css";
 export default function Frontend({ userEmail }) {
   const [invoices, setInvoices] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [csvDownloading, setCsvDownloading] = useState(false); // spinner state
+  const [uploadStatus, setUploadStatus] = useState(null); // upload message
 
   // Fetch invoices
   const fetchInvoices = async () => {
     const { data, error } = await supabase
       .from("invoices")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*");
 
     if (error) console.error("Error fetching invoices:", error);
     else {
@@ -56,17 +57,9 @@ export default function Frontend({ userEmail }) {
   const flaggedReasonMap = useMemo(() => {
     const map = {};
     const brokerInvoices = invoices.filter(inv => inv.broker_email === userEmail);
-    const loadNumberCount = {};
-
-    brokerInvoices.forEach(inv => {
-      const ln = inv.load_number;
-      if (ln) loadNumberCount[ln] = (loadNumberCount[ln] || 0) + 1;
-    });
-
     brokerInvoices.forEach(inv => {
       map[inv.id] = getFlaggedReason(inv, brokerInvoices);
     });
-
     return map;
   }, [invoices, userEmail]);
 
@@ -110,23 +103,22 @@ export default function Frontend({ userEmail }) {
 
   const UploadCSV = ({ onUpload, brokerEmail }) => {
     const fileInputRefInner = useRef(null);
-    const [status, setStatus] = useState(null);
 
     const handleFileChange = async (event) => {
       const file = event.target.files[0];
       if (!file) return;
 
-      setStatus("Uploading...");
+      setUploadStatus("Uploading...");
       try {
         const result = await uploadInvoiceFile(file, brokerEmail);
         if (result.success) {
-          setStatus("✅ Uploaded successfully!");
+          setUploadStatus("✅ Uploaded successfully!");
           if (onUpload) onUpload();
         } else {
-          setStatus(`❌ Upload failed: ${result.error}`);
+          setUploadStatus(`❌ Upload failed: ${result.error}`);
         }
       } catch (err) {
-        setStatus(`❌ Upload failed: ${err.message}`);
+        setUploadStatus(`❌ Upload failed: ${err.message}`);
       }
 
       if (fileInputRefInner.current) fileInputRefInner.current.value = "";
@@ -144,7 +136,7 @@ export default function Frontend({ userEmail }) {
         <button className="qa-btn" onClick={() => fileInputRefInner.current?.click()}>
           Upload CSV
         </button>
-        {status && <div className="upload-status">{status}</div>}
+        {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
       </div>
     );
   };
@@ -186,6 +178,19 @@ export default function Frontend({ userEmail }) {
 
     const formatDue = (date) => date ? new Date(date).toLocaleDateString() : "—";
 
+    // 🔹 Dashboard Sorting Logic
+    const sortedInvoices = [...filteredInvoices].sort((a, b) => {
+      const aFullyPaid = a.shipper_paid && a.carrier_paid;
+      const bFullyPaid = b.shipper_paid && b.carrier_paid;
+
+      if (aFullyPaid && !bFullyPaid) return 1;
+      if (!aFullyPaid && bFullyPaid) return -1;
+
+      const aDate = a.bill_date ? new Date(a.bill_date) : new Date(0);
+      const bDate = b.bill_date ? new Date(b.bill_date) : new Date(0);
+      return aDate - bDate;
+    });
+
     return (
       <div className="card" style={{ margin: "0 24px 24px" }}>
         <div className="card-head table-head flex justify-between items-center">
@@ -211,7 +216,7 @@ export default function Frontend({ userEmail }) {
               </tr>
             </thead>
             <tbody>
-              {filteredInvoices.length === 0 && (
+              {sortedInvoices.length === 0 && (
                 <tr>
                   <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
                     No invoices uploaded yet.
@@ -219,7 +224,7 @@ export default function Frontend({ userEmail }) {
                 </tr>
               )}
 
-              {filteredInvoices.map((inv) => {
+              {sortedInvoices.map((inv) => {
                 const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
                 const shipperTermsDisplay = inv.shipper_due
                   ? `Net 30 - ${formatDue(inv.shipper_due)}`
@@ -228,9 +233,7 @@ export default function Frontend({ userEmail }) {
                   ? `Net 15 - ${formatDue(inv.carrier_due)}`
                   : "Net 15 - —";
 
-                // ⚡ Use memoized flagged reason
                 const flaggedReason = flaggedReasonMap[inv.id];
-
                 const rowClass = flaggedReason ? "row-flagged" : "";
 
                 return (
@@ -277,60 +280,22 @@ export default function Frontend({ userEmail }) {
   };
 
   // ======================
-  // Download CSV / Report
+  // CSV Download
   // ======================
-  const downloadReport = () => {
+  const downloadReport = async () => {
     if (!invoices || invoices.length === 0) return alert("No invoices to download.");
 
-    const escapeCSV = (text) => `"${String(text || "").replace(/"/g, '""')}"`;
+    setCsvDownloading(true);
 
-    const headers = [
-      "Load #","Bill Date","Shipper","Load Rate ($)","Shipper Terms & Due",
-      "Shipper Paid","Carrier","Carrier Pay ($)","Carrier Terms & Due",
-      "Carrier Paid","Net Cash","Flagged Reason","File"
-    ];
+    try {
+      const { downloadCSV } = await import("../features/exportCSV");
+      downloadCSV(invoices, `TallyHauls_Report_${new Date().toISOString()}.csv`);
+    } catch (err) {
+      console.error("CSV download failed:", err);
+      alert("CSV download failed: " + err.message);
+    }
 
-    const lines = [headers.join(",")];
-
-    invoices.forEach(inv => {
-      const netCash = (inv.total_charge ?? 0) - (inv.carrier_pay ?? 0);
-      const flaggedReason = flaggedReasonMap[inv.id] ?? "";
-      lines.push([
-        escapeCSV(inv.load_number),
-        escapeCSV(inv.bill_date ? inv.bill_date.toISOString().split("T")[0] : ""),
-        escapeCSV(inv.shipper),
-        (inv.total_charge ?? 0).toFixed(2),
-        escapeCSV(`Net 30 - ${inv.shipper_due ? inv.shipper_due.toISOString().split("T")[0] : ""}`),
-        inv.shipper_paid ? "Yes" : "No",
-        escapeCSV(inv.carrier),
-        (inv.carrier_pay ?? 0).toFixed(2),
-        escapeCSV(`Net 15 - ${inv.carrier_due ? inv.carrier_due.toISOString().split("T")[0] : ""}`),
-        inv.carrier_paid ? "Yes" : "No",
-        netCash.toFixed(2),
-        escapeCSV(flaggedReason),
-        escapeCSV(inv.file_url)
-      ].join(","));
-    });
-
-    const kpiRows = [
-      ["", "", "KPIs"],
-      ["Projected Net Cash Flow", kpis.projectedCashFlow.toFixed(2)],
-      ["Actual Net Cash Flow", kpis.actualCashFlow.toFixed(2)],
-      ["Total Receivables", kpis.totalReceivables.toFixed(2)],
-      ["Total Payables", kpis.totalPayables.toFixed(2)],
-      ["Overdue Shipper Amount", kpis.overdueShipperAmount.toFixed(2)],
-      ["Overdue Carrier Amount", kpis.overdueCarrierAmount.toFixed(2)]
-    ];
-    kpiRows.forEach(r => lines.push(r.join(",")));
-
-    const blob = new Blob(lines, { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.setAttribute("download", `TallyHauls_Report_${new Date().toISOString()}.csv`);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    setCsvDownloading(false);
   };
 
   return (
@@ -342,7 +307,9 @@ export default function Frontend({ userEmail }) {
 
       <div className="quick-actions flex items-center gap-4 mb-4">
         <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} />
-        <button className="qa-btn" onClick={downloadReport}>Download Report</button>
+        <button className="qa-btn" onClick={downloadReport} disabled={csvDownloading}>
+          {csvDownloading ? "Please wait..." : "Download Report"}
+        </button>
         <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       </div>
 
