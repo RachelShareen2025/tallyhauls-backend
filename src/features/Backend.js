@@ -85,19 +85,25 @@ export function computeKPIs(rows) {
 ----------------------------- */
 export async function insertInvoices(rows, fileUrl, brokerEmail) {
   try {
-    const rowsWithDueDates = rows.map(row => {
+    const rowsToInsert = rows.map(row => {
       const billDateObj = row.bill_date ? new Date(row.bill_date) : null;
 
       return {
-        ...row,
-        broker_email: row.broker_email || brokerEmail,
+        broker_email: brokerEmail,
         file_url: fileUrl,
+        load_id: row.load_id,
+        bill_date: row.bill_date,
+        shipper: row.shipper,
+        carrier: row.carrier,
+        load_rate: row.load_rate,
+        carrier_pay: row.carrier_pay,
+        // Optional due dates for internal tracking
         shipper_due: row.shipper_due || (billDateObj ? new Date(billDateObj.getTime() + 30 * 86400000).toISOString().split("T")[0] : null),
         carrier_due: row.carrier_due || (billDateObj ? new Date(billDateObj.getTime() + 15 * 86400000).toISOString().split("T")[0] : null),
       };
     });
 
-    const { error } = await supabase.from("invoices").insert(rowsWithDueDates);
+    const { error } = await supabase.from("invoices").insert(rowsToInsert);
     if (error) throw error;
     return { success: true };
   } catch (err) {
@@ -107,7 +113,7 @@ export async function insertInvoices(rows, fileUrl, brokerEmail) {
 }
 
 /* -----------------------------
-   4️⃣ Upload File to Storage
+   3️⃣ Upload File to Storage
 ----------------------------- */
 export async function uploadFileToStorage(file, brokerEmail, isFailed = false) {
   if (!file || !brokerEmail) return { success: false, error: "File or broker email missing" };
@@ -134,7 +140,7 @@ export async function uploadFileToStorage(file, brokerEmail, isFailed = false) {
 }
 
 /* -----------------------------
-   5️⃣ Upload & Insert Invoices
+   4️⃣ Upload & Insert Invoices
 ----------------------------- */
 export async function uploadInvoiceFile(file, brokerEmail) {
   if (!brokerEmail) return { success: false, error: "Broker email required" };
@@ -146,8 +152,17 @@ export async function uploadInvoiceFile(file, brokerEmail) {
     let parsedRows;
     try {
       parsedRows = parseInvoiceCSV(fileText, brokerEmail);
-      // ✅ attach broker_email to every row if parser doesn't already
-      parsedRows = parsedRows.map(row => ({ ...row, broker_email: brokerEmail }));
+
+      // Only pick the 6 allowed fields from parser
+      parsedRows = parsedRows.map(row => ({
+        load_id: row.load_id,
+        bill_date: row.bill_date,
+        shipper: row.shipper,
+        carrier: row.carrier,
+        load_rate: row.load_rate,
+        carrier_pay: row.carrier_pay,
+      }));
+
     } catch (err) {
       await uploadFileToStorage(file, brokerEmail, true);
       return { success: false, error: `CSV parsing failed. Please check columns.` };
@@ -164,7 +179,7 @@ export async function uploadInvoiceFile(file, brokerEmail) {
 }
 
 /* -----------------------------
-   6️⃣ Update Invoice Status
+   5️⃣ Update Invoice Status
 ----------------------------- */
 export async function updateInvoiceStatus(invoiceId, field, value) {
   try {
@@ -182,7 +197,7 @@ export async function updateInvoiceStatus(invoiceId, field, value) {
 }
 
 /* -----------------------------
-   7️⃣ Bulk Update Invoice Status
+   6️⃣ Bulk Update Invoice Status
 ----------------------------- */
 export async function bulkUpdateInvoiceStatus(invoiceIds, field, value) {
   try {
