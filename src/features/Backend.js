@@ -174,6 +174,7 @@ export async function uploadInvoiceFile(file, brokerEmail) {
 
 
     const dbRes = await insertInvoices(parsedRows, storageRes.fileUrl, brokerEmail);
+    await computeAndUpdateStatus(brokerEmail);
     if (!dbRes.success) return dbRes;
 
 
@@ -220,6 +221,55 @@ export async function bulkUpdateInvoiceStatus(invoiceIds, field, value) {
     return { success: true };
   } catch (err) {
     console.error("Bulk update failed:", err.message);
+    return { success: false, error: err.message };
+  }
+}
+/* -----------------------------
+   8️⃣ Update Invoice Status After Upload
+----------------------------- */
+export async function computeAndUpdateStatus(brokerEmail) {
+  try {
+    // 1️⃣ Get all invoices for this broker
+    const { data: invoices, error: fetchError } = await supabase
+      .from("invoices")
+      .select("*")
+      .eq("broker_email", brokerEmail);
+
+    if (fetchError) throw fetchError;
+    if (!invoices || invoices.length === 0) return { success: true };
+
+    // 2️⃣ Prepare updates
+    const updates = invoices.map(inv => {
+      let newStatus = "pending";
+
+      if (inv.flagged_reason) newStatus = "flagged";
+      else if (inv.shipper_paid && inv.carrier_paid) newStatus = "paid";
+      else {
+        const today = new Date();
+        const shipperDue = inv.shipper_due ? new Date(inv.shipper_due) : null;
+        const carrierDue = inv.carrier_due ? new Date(inv.carrier_due) : null;
+
+        if ((!inv.shipper_paid && shipperDue && shipperDue < today) ||
+            (!inv.carrier_paid && carrierDue && carrierDue < today)) {
+          newStatus = "overdue";
+        }
+      }
+
+      return { id: inv.id, status: newStatus };
+    });
+
+    // 3️⃣ Bulk update
+    for (let i = 0; i < updates.length; i += 100) { // batch of 100
+      const batch = updates.slice(i, i + 100);
+      const { error: updateError } = await supabase
+        .from("invoices")
+        .upsert(batch, { onConflict: ["id"] }); // or .update({status}) if using PostgREST style
+      if (updateError) console.error("Status update error:", updateError.message);
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("Compute status failed:", err.message);
     return { success: false, error: err.message };
   }
 }
