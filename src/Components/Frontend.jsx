@@ -4,7 +4,8 @@ import { supabase } from "../supabaseClient";
 import {
   uploadInvoiceFile,
   computeKPIs,
-  updateInvoiceStatus
+  updateInvoiceStatus,
+  fetchInvoicesPaginated,
 } from "../features/Backend";
 import { getFlaggedReason } from "../features/flaggedReasons";
 import "./Dashboard.css";
@@ -14,32 +15,46 @@ export default function Frontend({ userEmail }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [csvDownloading, setCsvDownloading] = useState(false); // spinner state
   const [uploadStatus, setUploadStatus] = useState(null); // upload message
+  const [lastCursor, setLastCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
 
   // Fetch invoices
-  const fetchInvoices = async () => {
-    const { data, error } = await supabase
-      .from("invoices")
-      .select("*");
+  const fetchInvoices = async (reset = false) => {
+  if (loadingInvoices) return;
 
-    if (error) console.error("Error fetching invoices:", error);
-    else {
-      const normalizedData = (data || []).map(inv => ({
+  setLoadingInvoices(true);
+
+  try {
+    const cursor = reset ? null : lastCursor;
+    const pageSize = 50;
+    const res = await fetchInvoicesPaginated(userEmail, pageSize, cursor);
+
+    if (res.success) {
+      const normalizedData = (res.data || []).map(inv => ({
         ...inv,
-        total_charge: parseFloat(inv.total_charge) || 0,
-        carrier_pay: parseFloat(inv.carrier_pay) || 0,
+        total_charge: parseFloat(inv.total_charge || 0),
+        carrier_pay: parseFloat(inv.carrier_pay || 0),
         bill_date: inv.bill_date ? new Date(inv.bill_date + "T00:00:00Z") : null,
         shipper_due: inv.shipper_due ? new Date(inv.shipper_due + "T00:00:00Z") : null,
         carrier_due: inv.carrier_due ? new Date(inv.carrier_due + "T00:00:00Z") : null,
         shipper_paid: !!inv.shipper_paid,
         carrier_paid: !!inv.carrier_paid
       }));
-      setInvoices(normalizedData);
-    }
-  };
 
-  useEffect(() => {
-    fetchInvoices();
-  }, []);
+      setInvoices(prev => reset ? normalizedData : [...prev, ...normalizedData]);
+      setLastCursor(res.nextCursor);
+      setHasMore(res.nextCursor !== null);
+    } else {
+      console.error("Error fetching invoices:", res.error);
+    }
+  } catch (err) {
+    console.error("Error fetching invoices:", err);
+  }
+
+  setLoadingInvoices(false);
+};
+
 
   // Memoized KPIs
   const kpis = useMemo(() => {
@@ -71,7 +86,7 @@ export default function Frontend({ userEmail }) {
 
   // Refresh invoice list after upload
   const handleInvoiceUpload = async () => {
-    await fetchInvoices();
+    await fetchInvoices(true); // reset pagination after upload
   };
 
   // Toggle single paid checkbox
@@ -315,6 +330,15 @@ export default function Frontend({ userEmail }) {
 
       <NetCashSummary kpis={kpis} />
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
+
+      {hasMore && (
+        <div style={{ textAlign: "center", margin: "16px 0" }}>
+         <button onClick={() => fetchInvoices()} disabled={loadingInvoices}>
+          {loadingInvoices ? "Loading..." : "Load More"}
+         </button>
+       </div>
+      )}
+
     </div>
   );
 }

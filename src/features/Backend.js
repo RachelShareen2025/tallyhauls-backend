@@ -227,44 +227,59 @@ export async function bulkUpdateInvoiceStatus(invoiceIds, field, value) {
 /* -----------------------------
    8️⃣ Update Invoice Status After Upload
 ----------------------------- */
-export async function computeAndUpdateStatus(brokerEmail) {
+export async function computeAndUpdateStatus(brokerEmail, pageSize = 100) {
   try {
-    // 1️⃣ Get all invoices for this broker
-    const { data: invoices, error: fetchError } = await supabase
-      .from("invoices")
-      .select("*")
-      .eq("broker_email", brokerEmail);
+    let lastId = null;
+    let moreRows = true;
 
-    if (fetchError) throw fetchError;
-    if (!invoices || invoices.length === 0) return { success: true };
+    while (moreRows) {
+      // 1️⃣ Fetch a page of invoices
+      let query = supabase
+        .from("invoices")
+        .select("*")
+        .eq("broker_email", brokerEmail)
+        .order("id", { ascending: true })
+        .limit(pageSize);
 
-    // 2️⃣ Prepare updates
-    const updates = invoices.map(inv => {
-      let newStatus = "pending";
+      if (lastId) query = query.gt("id", lastId);
 
-      if (inv.flagged_reason) newStatus = "flagged";
-      else if (inv.shipper_paid && inv.carrier_paid) newStatus = "paid";
-      else {
-        const today = new Date();
-        const shipperDue = inv.shipper_due ? new Date(inv.shipper_due) : null;
-        const carrierDue = inv.carrier_due ? new Date(inv.carrier_due) : null;
+      const { data: invoices, error: fetchError } = await query;
+      if (fetchError) throw fetchError;
 
-        if ((!inv.shipper_paid && shipperDue && shipperDue < today) ||
-            (!inv.carrier_paid && carrierDue && carrierDue < today)) {
-          newStatus = "overdue";
+      if (!invoices || invoices.length === 0) break;
+
+      // 2️⃣ Prepare updates for this page
+      const updates = invoices.map(inv => {
+        let newStatus = "pending";
+
+        if (inv.flagged_reason) newStatus = "flagged";
+        else if (inv.shipper_paid && inv.carrier_paid) newStatus = "paid";
+        else {
+          const today = new Date();
+          const shipperDue = inv.shipper_due ? new Date(inv.shipper_due) : null;
+          const carrierDue = inv.carrier_due ? new Date(inv.carrier_due) : null;
+
+          if ((!inv.shipper_paid && shipperDue && shipperDue < today) ||
+              (!inv.carrier_paid && carrierDue && carrierDue < today)) {
+            newStatus = "overdue";
+          }
         }
+
+        return { id: inv.id, status: newStatus };
+      });
+
+      // 3️⃣ Bulk upsert the page
+      for (let i = 0; i < updates.length; i += 50) { // batches of 50
+        const batch = updates.slice(i, i + 50);
+        const { error: updateError } = await supabase
+          .from("invoices")
+          .upsert(batch, { onConflict: ["id"] });
+        if (updateError) console.error("Status update error:", updateError.message);
       }
 
-      return { id: inv.id, status: newStatus };
-    });
-
-    // 3️⃣ Bulk update
-    for (let i = 0; i < updates.length; i += 100) { // batch of 100
-      const batch = updates.slice(i, i + 100);
-      const { error: updateError } = await supabase
-        .from("invoices")
-        .upsert(batch, { onConflict: ["id"] }); // or .update({status}) if using PostgREST style
-      if (updateError) console.error("Status update error:", updateError.message);
+      // 4️⃣ Prepare next page
+      lastId = invoices[invoices.length - 1].id;
+      moreRows = invoices.length === pageSize;
     }
 
     return { success: true };
