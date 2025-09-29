@@ -89,6 +89,43 @@ export function computeKPIs(rows) {
     overdueCarrierAmount: calculateOverdueCarrierAmount(rows),
   };
 }
+/* -----------------------------
+   3️⃣ Fetch KPIs for Broker
+----------------------------- */
+export async function fetchKPIs(brokerEmail, pageSize = 100) {
+  try {
+    let allInvoices = [];
+    let lastId = null;
+    let moreRows = true;
+
+    while (moreRows) {
+      let query = supabase
+        .from("invoices")
+        .select("*")
+        .eq("broker_email", brokerEmail)
+        .order("id", { ascending: true })
+        .limit(pageSize);
+
+      if (lastId) query = query.gt("id", lastId);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      if (!data || data.length === 0) break;
+
+      allInvoices = [...allInvoices, ...data];
+
+      lastId = data[data.length - 1].id;
+      moreRows = data.length === pageSize;
+    }
+
+    const kpis = computeKPIs(allInvoices);
+    return { success: true, kpis };
+  } catch (err) {
+    console.error("Fetch KPIs failed:", err.message);
+    return { success: false, error: err.message };
+  }
+}
 
 
 /* -----------------------------

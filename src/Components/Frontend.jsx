@@ -3,9 +3,9 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import {
   uploadInvoiceFile,
-  computeKPIs,
   updateInvoiceStatus,
   fetchInvoicesPaginated,
+  fetchKPIs,
 } from "../features/Backend";
 import { getFlaggedReason } from "../features/flaggedReasons";
 import "./Dashboard.css";
@@ -18,6 +18,23 @@ export default function Frontend({ userEmail }) {
   const [lastCursor, setLastCursor] = useState(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [kpis, setKpis] = useState({
+  projectedCashFlow: 0,
+  actualCashFlow: 0,
+  totalReceivables: 0,
+  totalPayables: 0,
+  overdueShipperAmount: 0,
+  overdueCarrierAmount: 0
+  });
+  useEffect(() => {
+  const loadKPIs = async () => {
+    const res = await fetchKPIs(userEmail); // call backend
+    if (res.success) setKpis(res.kpis);      // update frontend state
+    else console.error("Failed to fetch KPIs:", res.error);
+  };
+
+  loadKPIs();
+}, [invoices, userEmail]); // re-run whenever invoices list changes
 
   // Fetch invoices
   const fetchInvoices = async (reset = false) => {
@@ -54,19 +71,6 @@ export default function Frontend({ userEmail }) {
 
   setLoadingInvoices(false);
 };
-
-
-  // Memoized KPIs
-  const kpis = useMemo(() => {
-    return invoices.length > 0 ? computeKPIs(invoices) : {
-      projectedCashFlow: 0,
-      actualCashFlow: 0,
-      totalReceivables: 0,
-      totalPayables: 0,
-      overdueShipperAmount: 0,
-      overdueCarrierAmount: 0
-    };
-  }, [invoices]);
 
   // Precompute flagged reasons per broker
   const flaggedReasonMap = useMemo(() => {
@@ -337,7 +341,7 @@ export default function Frontend({ userEmail }) {
           {loadingInvoices ? "Loading..." : "Load More"}
          </button>
        </div>
-      )}
+    )}
 
     </div>
   );
