@@ -288,3 +288,28 @@ export async function computeAndUpdateStatus(brokerEmail, pageSize = 100) {
     return { success: false, error: err.message };
   }
 }
+/* -----------------------------
+   9️⃣ Fetch Invoices Paginated
+----------------------------- */
+export async function fetchInvoicesPaginated(brokerEmail, pageSize = 50, cursor = null) {
+  try {
+    let query = supabase
+      .from("invoices")
+      .select("*")
+      .eq("broker_email", brokerEmail)
+      .order("id", { ascending: true })
+      .limit(pageSize);
+
+    if (cursor) query = query.gt("id", cursor);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const nextCursor = data.length === pageSize ? data[data.length - 1].id : null;
+
+    return { success: true, data, nextCursor };
+  } catch (err) {
+    console.error("Fetch invoices paginated failed:", err.message);
+    return { success: false, error: err.message };
+  }
+}
