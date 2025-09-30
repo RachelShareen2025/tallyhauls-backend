@@ -47,17 +47,19 @@ export default function Frontend() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  const user = session?.user; // ✅ helper for backend calls
+
   // --- Load KPIs ---
   useEffect(() => {
-    if (!session) return;
+    if (!user) return;
 
     const loadKPIs = async () => {
-      const res = await fetchKPIs(session);
+      const res = await fetchKPIs(user);
       if (res.success) setKpis(res.kpis);
       else console.error("Failed to fetch KPIs:", res.error);
     };
     loadKPIs();
-  }, [invoices, session]);
+  }, [invoices, user]);
 
   // --- Precompute flagged reasons ---
   const flaggedReasonMap = useMemo(() => {
@@ -70,12 +72,12 @@ export default function Frontend() {
 
   // --- Fetch invoices ---
   const fetchInvoices = async (reset = false) => {
-    if (!session || loadingInvoices) return;
+    if (!user || loadingInvoices) return;
     setLoadingInvoices(true);
     try {
       const cursor = reset ? null : lastCursor;
       const pageSize = 50;
-      const res = await fetchInvoicesPaginated(session, pageSize, cursor);
+      const res = await fetchInvoicesPaginated(user, pageSize, cursor);
 
       if (res.success) {
         const normalizedData = (res.data || []).map(inv => ({
@@ -119,7 +121,7 @@ export default function Frontend() {
     );
     setInvoices(updatedInvoices);
 
-    const res = await updateInvoiceStatus(invoiceId, field, !currentValue, session);
+    const res = await updateInvoiceStatus(invoiceId, field, !currentValue, user);
     if (!res.success) {
       setInvoices(invoices);
       alert(`Update failed: ${res.error}`);
@@ -150,7 +152,7 @@ export default function Frontend() {
 
       setUploadStatus("Uploading...");
       try {
-        const result = await uploadInvoiceFile(file, session); // PASS SESSION OBJECT
+        const result = await uploadInvoiceFile(file, user); // ✅ pass user
         if (result.success) {
           setUploadStatus("✅ Uploaded successfully!");
           if (onUpload) onUpload();
@@ -332,7 +334,7 @@ export default function Frontend() {
       <header className="dashboard-header flex justify-between items-center mb-4">
         <img src="/logo.png" alt="TallyHauls" className="logo h-10" />
         <div>
-          <span style={{ marginRight: "16px" }}>Logged in as: {session.user.email}</span>
+          <span style={{ marginRight: "16px" }}>Logged in as: {user?.email}</span>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
       </header>
