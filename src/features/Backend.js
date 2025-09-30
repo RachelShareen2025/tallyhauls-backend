@@ -83,8 +83,8 @@ export function computeKPIs(rows) {
 /* -----------------------------
    2️⃣ Fetch KPIs
 ----------------------------- */
-export async function fetchKPIs(pageSize = 100, sessionUser) {
-  if (!sessionUser?.email) return { success: false, error: "User session missing. Please log in." };
+export async function fetchKPIs(sessionUser, pageSize = 100) {
+  if (!sessionUser?.email) return { success: false, error: "User session missing." };
 
   try {
     let allInvoices = [];
@@ -119,18 +119,18 @@ export async function fetchKPIs(pageSize = 100, sessionUser) {
 }
 
 /* -----------------------------
-   3️⃣ Insert Invoices (SESSION-AWARE)
+   3️⃣ Insert Invoices (RLS SAFE)
 ----------------------------- */
 export async function insertInvoices(rows, fileUrl, sessionUser) {
-  if (!sessionUser?.email) return { success: false, error: "User session missing. Please log in." };
+  if (!rows || rows.length === 0) return { success: false, error: "No rows to insert." };
 
   try {
     const rowsWithDueDates = rows.map(row => {
       const billDateObj = row.bill_date ? new Date(row.bill_date) : null;
       return {
         ...row,
+        broker_email: sessionUser.email, // ✅ RLS-safe
         file_url: fileUrl,
-        broker_email: sessionUser.email,
         shipper_due: row.shipper_due || (billDateObj ? new Date(billDateObj.getTime() + 30 * 86400000).toISOString().split("T")[0] : null),
         carrier_due: row.carrier_due || (billDateObj ? new Date(billDateObj.getTime() + 15 * 86400000).toISOString().split("T")[0] : null),
       };
@@ -138,6 +138,7 @@ export async function insertInvoices(rows, fileUrl, sessionUser) {
 
     const { error } = await supabase.from("invoices").insert(rowsWithDueDates);
     if (error) throw error;
+
     return { success: true };
   } catch (err) {
     console.error("DB insert failed:", err.message);
@@ -175,7 +176,7 @@ export async function uploadFileToStorage(file, isFailed = false) {
    5️⃣ Upload & Insert Invoices
 ----------------------------- */
 export async function uploadInvoiceFile(file, sessionUser) {
-  if (!sessionUser?.email) return { success: false, error: "User session missing. Please log in." };
+  if (!sessionUser?.email) return { success: false, error: "User session missing." };
 
   try {
     const storageRes = await uploadFileToStorage(file);
@@ -205,7 +206,7 @@ export async function uploadInvoiceFile(file, sessionUser) {
    6️⃣ Update Invoice Status
 ----------------------------- */
 export async function updateInvoiceStatus(invoiceId, field, value, sessionUser) {
-  if (!sessionUser?.email) return { success: false, error: "User session missing. Please log in." };
+  if (!sessionUser?.email) return { success: false, error: "User session missing." };
 
   try {
     const { error } = await supabase
@@ -226,7 +227,7 @@ export async function updateInvoiceStatus(invoiceId, field, value, sessionUser) 
    7️⃣ Bulk Update Invoice Status
 ----------------------------- */
 export async function bulkUpdateInvoiceStatus(invoiceIds, field, value, sessionUser) {
-  if (!sessionUser?.email) return { success: false, error: "User session missing. Please log in." };
+  if (!sessionUser?.email) return { success: false, error: "User session missing." };
 
   try {
     const { error } = await supabase
@@ -244,10 +245,10 @@ export async function bulkUpdateInvoiceStatus(invoiceIds, field, value, sessionU
 }
 
 /* -----------------------------
-   8️⃣ Update Invoice Status After Upload
+   8️⃣ Compute & Update Status
 ----------------------------- */
 export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
-  if (!sessionUser?.email) return { success: false, error: "User session missing. Please log in." };
+  if (!sessionUser?.email) return { success: false, error: "User session missing." };
 
   try {
     let lastId = null;
@@ -283,7 +284,7 @@ export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
           }
         }
 
-        return { id: inv.id, status: newStatus };
+        return { id: inv.id, status: newStatus, broker_email: sessionUser.email }; // ✅ include broker_email for RLS
       });
 
       for (let i = 0; i < updates.length; i += 50) {
@@ -309,7 +310,7 @@ export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
    9️⃣ Fetch Invoices Paginated
 ----------------------------- */
 export async function fetchInvoicesPaginated(sessionUser, pageSize = 50, cursor = null) {
-  if (!sessionUser?.email) return { success: false, error: "User session missing. Please log in." };
+  if (!sessionUser?.email) return { success: false, error: "User session missing." };
 
   try {
     let query = supabase
