@@ -11,6 +11,7 @@ import { getFlaggedReason } from "../features/flaggedReasons";
 import "./Dashboard.css";
 
 export default function Frontend() {
+  // --- State ---
   const [session, setSession] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,8 +44,6 @@ export default function Frontend() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  if (!session) return <div>Loading...</div>;
-
   // --- Load KPIs ---
   useEffect(() => {
     const loadKPIs = async () => {
@@ -53,6 +52,15 @@ export default function Frontend() {
       else console.error("Failed to fetch KPIs:", res.error);
     };
     loadKPIs();
+  }, [invoices]);
+
+  // --- Precompute flagged reasons ---
+  const flaggedReasonMap = useMemo(() => {
+    const map = {};
+    invoices.forEach(inv => {
+      map[inv.id] = getFlaggedReason(inv, invoices);
+    });
+    return map;
   }, [invoices]);
 
   // --- Fetch invoices ---
@@ -89,16 +97,6 @@ export default function Frontend() {
     setLoadingInvoices(false);
   };
 
-  // --- Precompute flagged reasons ---
-  const flaggedReasonMap = useMemo(() => {
-    const map = {};
-    const brokerInvoices = invoices; // no userEmail filter needed
-    brokerInvoices.forEach(inv => {
-      map[inv.id] = getFlaggedReason(inv, brokerInvoices);
-    });
-    return map;
-  }, [invoices]);
-
   // --- Logout ---
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -123,6 +121,9 @@ export default function Frontend() {
       alert(`Update failed: ${res.error}`);
     }
   };
+
+  // --- Conditional render for loading session ---
+  if (!session) return <div>Loading...</div>;
 
   // === Components ===
   const Filters = ({ searchQuery, onSearchChange }) => (
