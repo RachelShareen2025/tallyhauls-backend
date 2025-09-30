@@ -10,90 +10,107 @@ import {
 import { getFlaggedReason } from "../features/flaggedReasons";
 import "./Dashboard.css";
 
-export default function Frontend({ userEmail }) {
+export default function Frontend() {
+  const [session, setSession] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [csvDownloading, setCsvDownloading] = useState(false); // spinner state
-  const [uploadStatus, setUploadStatus] = useState(null); // upload message
+  const [csvDownloading, setCsvDownloading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(null);
   const [lastCursor, setLastCursor] = useState(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [kpis, setKpis] = useState({
-  projectedCashFlow: 0,
-  actualCashFlow: 0,
-  totalReceivables: 0,
-  totalPayables: 0,
-  overdueShipperAmount: 0,
-  overdueCarrierAmount: 0
+    projectedCashFlow: 0,
+    actualCashFlow: 0,
+    totalReceivables: 0,
+    totalPayables: 0,
+    overdueShipperAmount: 0,
+    overdueCarrierAmount: 0
   });
+
+  // --- Auth session setup ---
   useEffect(() => {
-  const loadKPIs = async () => {
-    const res = await fetchKPIs(userEmail); // call backend
-    if (res.success) setKpis(res.kpis);      // update frontend state
-    else console.error("Failed to fetch KPIs:", res.error);
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+    };
+    getSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  if (!session) return <div>Loading...</div>;
+
+  // --- Load KPIs ---
+  useEffect(() => {
+    const loadKPIs = async () => {
+      const res = await fetchKPIs();
+      if (res.success) setKpis(res.kpis);
+      else console.error("Failed to fetch KPIs:", res.error);
+    };
+    loadKPIs();
+  }, [invoices]);
+
+  // --- Fetch invoices ---
+  const fetchInvoices = async (reset = false) => {
+    if (loadingInvoices) return;
+
+    setLoadingInvoices(true);
+    try {
+      const cursor = reset ? null : lastCursor;
+      const pageSize = 50;
+      const res = await fetchInvoicesPaginated(pageSize, cursor);
+
+      if (res.success) {
+        const normalizedData = (res.data || []).map(inv => ({
+          ...inv,
+          total_charge: parseFloat(inv.total_charge || 0),
+          carrier_pay: parseFloat(inv.carrier_pay || 0),
+          bill_date: inv.bill_date ? new Date(inv.bill_date + "T00:00:00Z") : null,
+          shipper_due: inv.shipper_due ? new Date(inv.shipper_due + "T00:00:00Z") : null,
+          carrier_due: inv.carrier_due ? new Date(inv.carrier_due + "T00:00:00Z") : null,
+          shipper_paid: !!inv.shipper_paid,
+          carrier_paid: !!inv.carrier_paid
+        }));
+
+        setInvoices(prev => reset ? normalizedData : [...prev, ...normalizedData]);
+        setLastCursor(res.nextCursor);
+        setHasMore(res.nextCursor !== null);
+      } else {
+        console.error("Error fetching invoices:", res.error);
+      }
+    } catch (err) {
+      console.error("Error fetching invoices:", err);
+    }
+    setLoadingInvoices(false);
   };
 
-  loadKPIs();
-}, [invoices, userEmail]); // re-run whenever invoices list changes
-
-  // Fetch invoices
-  const fetchInvoices = async (reset = false) => {
-  if (loadingInvoices) return;
-
-  setLoadingInvoices(true);
-
-  try {
-    const cursor = reset ? null : lastCursor;
-    const pageSize = 50;
-    const res = await fetchInvoicesPaginated(userEmail, pageSize, cursor);
-
-    if (res.success) {
-      const normalizedData = (res.data || []).map(inv => ({
-        ...inv,
-        total_charge: parseFloat(inv.total_charge || 0),
-        carrier_pay: parseFloat(inv.carrier_pay || 0),
-        bill_date: inv.bill_date ? new Date(inv.bill_date + "T00:00:00Z") : null,
-        shipper_due: inv.shipper_due ? new Date(inv.shipper_due + "T00:00:00Z") : null,
-        carrier_due: inv.carrier_due ? new Date(inv.carrier_due + "T00:00:00Z") : null,
-        shipper_paid: !!inv.shipper_paid,
-        carrier_paid: !!inv.carrier_paid
-      }));
-
-      setInvoices(prev => reset ? normalizedData : [...prev, ...normalizedData]);
-      setLastCursor(res.nextCursor);
-      setHasMore(res.nextCursor !== null);
-    } else {
-      console.error("Error fetching invoices:", res.error);
-    }
-  } catch (err) {
-    console.error("Error fetching invoices:", err);
-  }
-
-  setLoadingInvoices(false);
-};
-
-  // Precompute flagged reasons per broker
+  // --- Precompute flagged reasons ---
   const flaggedReasonMap = useMemo(() => {
     const map = {};
-    const brokerInvoices = invoices.filter(inv => inv.broker_email === userEmail);
+    const brokerInvoices = invoices; // no userEmail filter needed
     brokerInvoices.forEach(inv => {
       map[inv.id] = getFlaggedReason(inv, brokerInvoices);
     });
     return map;
-  }, [invoices, userEmail]);
+  }, [invoices]);
 
-  // Logout
+  // --- Logout ---
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = "/";
   };
 
-  // Refresh invoice list after upload
+  // --- Refresh invoice list after upload ---
   const handleInvoiceUpload = async () => {
-    await fetchInvoices(true); // reset pagination after upload
+    await fetchInvoices(true);
   };
 
-  // Toggle single paid checkbox
+  // --- Toggle single paid checkbox ---
   const handlePaidToggle = async (invoiceId, field, currentValue) => {
     const updatedInvoices = invoices.map(inv =>
       inv.id === invoiceId ? { ...inv, [field]: !currentValue } : inv
@@ -120,7 +137,7 @@ export default function Frontend({ userEmail }) {
     </div>
   );
 
-  const UploadCSV = ({ onUpload, brokerEmail }) => {
+  const UploadCSV = ({ onUpload }) => {
     const fileInputRefInner = useRef(null);
 
     const handleFileChange = async (event) => {
@@ -129,7 +146,7 @@ export default function Frontend({ userEmail }) {
 
       setUploadStatus("Uploading...");
       try {
-        const result = await uploadInvoiceFile(file, brokerEmail);
+        const result = await uploadInvoiceFile(file);
         if (result.success) {
           setUploadStatus("✅ Uploaded successfully!");
           if (onUpload) onUpload();
@@ -197,7 +214,6 @@ export default function Frontend({ userEmail }) {
 
     const formatDue = (date) => date ? new Date(date).toLocaleDateString() : "—";
 
-    // 🔹 Dashboard Sorting Logic
     const sortedInvoices = [...filteredInvoices].sort((a, b) => {
       const aFullyPaid = a.shipper_paid && a.carrier_paid;
       const bFullyPaid = b.shipper_paid && b.carrier_paid;
@@ -298,14 +314,11 @@ export default function Frontend({ userEmail }) {
     );
   };
 
-  // ======================
-  // CSV Download
-  // ======================
+  // --- CSV Download ---
   const downloadReport = async () => {
     if (!invoices || invoices.length === 0) return alert("No invoices to download.");
 
     setCsvDownloading(true);
-
     try {
       const { downloadCSV } = await import("../features/exportCSV");
       downloadCSV(invoices, `TallyHauls_Report_${new Date().toISOString()}.csv`);
@@ -313,7 +326,6 @@ export default function Frontend({ userEmail }) {
       console.error("CSV download failed:", err);
       alert("CSV download failed: " + err.message);
     }
-
     setCsvDownloading(false);
   };
 
@@ -321,11 +333,14 @@ export default function Frontend({ userEmail }) {
     <div className="dashboard-container p-4">
       <header className="dashboard-header flex justify-between items-center mb-4">
         <img src="/logo.png" alt="TallyHauls" className="logo h-10" />
-        <button className="logout-btn" onClick={handleLogout}>Logout</button>
+        <div>
+          <span style={{ marginRight: "16px" }}>Logged in as: {session.user.email}</span>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
+        </div>
       </header>
 
       <div className="quick-actions flex items-center gap-4 mb-4">
-        <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} />
+        <UploadCSV onUpload={handleInvoiceUpload} />
         <button className="qa-btn" onClick={downloadReport} disabled={csvDownloading}>
           {csvDownloading ? "Please wait..." : "Download Report"}
         </button>
@@ -337,12 +352,11 @@ export default function Frontend({ userEmail }) {
 
       {hasMore && (
         <div style={{ textAlign: "center", margin: "16px 0" }}>
-         <button onClick={() => fetchInvoices()} disabled={loadingInvoices}>
-          {loadingInvoices ? "Loading..." : "Load More"}
-         </button>
-       </div>
-    )}
-
+          <button onClick={() => fetchInvoices()} disabled={loadingInvoices}>
+            {loadingInvoices ? "Loading..." : "Load More"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
