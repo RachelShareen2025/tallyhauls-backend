@@ -11,7 +11,6 @@ import { getFlaggedReason } from "../features/flaggedReasons";
 import "./Dashboard.css";
 
 export default function Frontend() {
-  // --- State ---
   const [session, setSession] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -26,7 +25,7 @@ export default function Frontend() {
     totalReceivables: 0,
     totalPayables: 0,
     overdueShipperAmount: 0,
-    overdueCarrierAmount: 0
+    overdueCarrierAmount: 0,
   });
 
   // --- Auth session setup ---
@@ -35,7 +34,7 @@ export default function Frontend() {
       const { data } = await supabase.auth.getSession();
       if (data?.session) {
         setSession(data.session);
-        supabase.auth.setAuth(data.session.access_token); // ensures JWT is used for RLS
+        supabase.auth.setAuth(data.session.access_token);
       }
     };
     getSession();
@@ -50,13 +49,15 @@ export default function Frontend() {
 
   // --- Load KPIs ---
   useEffect(() => {
+    if (!session) return;
+
     const loadKPIs = async () => {
-      const res = await fetchKPIs();
+      const res = await fetchKPIs(session);
       if (res.success) setKpis(res.kpis);
       else console.error("Failed to fetch KPIs:", res.error);
     };
     loadKPIs();
-  }, [invoices]);
+  }, [invoices, session]);
 
   // --- Precompute flagged reasons ---
   const flaggedReasonMap = useMemo(() => {
@@ -67,16 +68,14 @@ export default function Frontend() {
     return map;
   }, [invoices]);
 
-  // --- Fetch invoices with JWT-aware row-level security ---
+  // --- Fetch invoices ---
   const fetchInvoices = async (reset = false) => {
-    if (!session) return;
-    if (loadingInvoices) return;
-
+    if (!session || loadingInvoices) return;
     setLoadingInvoices(true);
     try {
       const cursor = reset ? null : lastCursor;
       const pageSize = 50;
-      const res = await fetchInvoicesPaginated(pageSize, cursor, session.access_token);
+      const res = await fetchInvoicesPaginated(session, pageSize, cursor);
 
       if (res.success) {
         const normalizedData = (res.data || []).map(inv => ({
@@ -87,10 +86,10 @@ export default function Frontend() {
           shipper_due: inv.shipper_due ? new Date(inv.shipper_due + "T00:00:00Z") : null,
           carrier_due: inv.carrier_due ? new Date(inv.carrier_due + "T00:00:00Z") : null,
           shipper_paid: !!inv.shipper_paid,
-          carrier_paid: !!inv.carrier_paid
+          carrier_paid: !!inv.carrier_paid,
         }));
 
-        setInvoices(prev => reset ? normalizedData : [...prev, ...normalizedData]);
+        setInvoices(prev => (reset ? normalizedData : [...prev, ...normalizedData]));
         setLastCursor(res.nextCursor);
         setHasMore(res.nextCursor !== null);
       } else {
@@ -108,29 +107,28 @@ export default function Frontend() {
     window.location.href = "/";
   };
 
-  // --- Refresh invoice list after upload ---
+  // --- Refresh after upload ---
   const handleInvoiceUpload = async () => {
     await fetchInvoices(true);
   };
 
-  // --- Toggle single paid checkbox ---
+  // --- Toggle paid checkbox ---
   const handlePaidToggle = async (invoiceId, field, currentValue) => {
     const updatedInvoices = invoices.map(inv =>
       inv.id === invoiceId ? { ...inv, [field]: !currentValue } : inv
     );
     setInvoices(updatedInvoices);
 
-    const res = await updateInvoiceStatus(invoiceId, field, !currentValue, session.access_token);
+    const res = await updateInvoiceStatus(invoiceId, field, !currentValue, session);
     if (!res.success) {
       setInvoices(invoices);
       alert(`Update failed: ${res.error}`);
     }
   };
 
-  // --- Conditional render for loading session ---
   if (!session) return <div>Loading...</div>;
 
-  // === Components ===
+  // --- Components ---
   const Filters = ({ searchQuery, onSearchChange }) => (
     <div className="quick-actions horizontal">
       <input
@@ -152,7 +150,7 @@ export default function Frontend() {
 
       setUploadStatus("Uploading...");
       try {
-        const result = await uploadInvoiceFile(file, session.access_token); // pass JWT
+        const result = await uploadInvoiceFile(file, session); // PASS SESSION OBJECT
         if (result.success) {
           setUploadStatus("✅ Uploaded successfully!");
           if (onUpload) onUpload();
@@ -218,7 +216,7 @@ export default function Frontend() {
       JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const formatDue = (date) => date ? new Date(date).toLocaleDateString() : "—";
+    const formatDue = (date) => (date ? new Date(date).toLocaleDateString() : "—");
 
     const sortedInvoices = [...filteredInvoices].sort((a, b) => {
       const aFullyPaid = a.shipper_paid && a.carrier_paid;
@@ -264,7 +262,6 @@ export default function Frontend() {
                   </td>
                 </tr>
               )}
-
               {sortedInvoices.map((inv) => {
                 const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
                 const shipperTermsDisplay = inv.shipper_due
@@ -305,11 +302,7 @@ export default function Frontend() {
                     </td>
                     <td className="numeric">${netCash.toFixed(2)}</td>
                     <td>{flaggedReason || "—"}</td>
-                    <td>
-                      {inv.file_url ? (
-                        <a href={inv.file_url} target="_blank" rel="noreferrer">View</a>
-                      ) : "—"}
-                    </td>
+                    <td>{inv.file_url ? <a href={inv.file_url} target="_blank" rel="noreferrer">View</a> : "—"}</td>
                   </tr>
                 );
               })}
@@ -320,7 +313,6 @@ export default function Frontend() {
     );
   };
 
-  // --- CSV Download ---
   const downloadReport = async () => {
     if (!invoices || invoices.length === 0) return alert("No invoices to download.");
 
