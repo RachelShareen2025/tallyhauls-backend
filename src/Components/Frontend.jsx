@@ -33,12 +33,16 @@ export default function Frontend() {
   useEffect(() => {
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
-      setSession(data.session);
+      if (data?.session) {
+        setSession(data.session);
+        supabase.auth.setAuth(data.session.access_token); // ensures JWT is used for RLS
+      }
     };
     getSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session?.access_token) supabase.auth.setAuth(session.access_token);
     });
 
     return () => listener.subscription.unsubscribe();
@@ -63,15 +67,16 @@ export default function Frontend() {
     return map;
   }, [invoices]);
 
-  // --- Fetch invoices ---
+  // --- Fetch invoices with JWT-aware row-level security ---
   const fetchInvoices = async (reset = false) => {
+    if (!session) return;
     if (loadingInvoices) return;
 
     setLoadingInvoices(true);
     try {
       const cursor = reset ? null : lastCursor;
       const pageSize = 50;
-      const res = await fetchInvoicesPaginated(pageSize, cursor);
+      const res = await fetchInvoicesPaginated(pageSize, cursor, session.access_token);
 
       if (res.success) {
         const normalizedData = (res.data || []).map(inv => ({
@@ -115,7 +120,7 @@ export default function Frontend() {
     );
     setInvoices(updatedInvoices);
 
-    const res = await updateInvoiceStatus(invoiceId, field, !currentValue);
+    const res = await updateInvoiceStatus(invoiceId, field, !currentValue, session.access_token);
     if (!res.success) {
       setInvoices(invoices);
       alert(`Update failed: ${res.error}`);
@@ -147,7 +152,7 @@ export default function Frontend() {
 
       setUploadStatus("Uploading...");
       try {
-        const result = await uploadInvoiceFile(file);
+        const result = await uploadInvoiceFile(file, session.access_token); // pass JWT
         if (result.success) {
           setUploadStatus("✅ Uploaded successfully!");
           if (onUpload) onUpload();
