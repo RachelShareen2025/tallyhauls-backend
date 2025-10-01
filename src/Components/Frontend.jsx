@@ -10,123 +10,118 @@ import {
 import { getFlaggedReason } from "../features/flaggedReasons";
 import "./Dashboard.css";
 
-export default function Frontend() {
-  const [session, setSession] = useState(null);
+
+export default function Frontend({ userEmail }) {
   const [invoices, setInvoices] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [csvDownloading, setCsvDownloading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState(null);
+  const [csvDownloading, setCsvDownloading] = useState(false); // spinner state
+  const [uploadStatus, setUploadStatus] = useState(null); // upload message
   const [lastCursor, setLastCursor] = useState(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [kpis, setKpis] = useState({
-    projectedCashFlow: 0,
-    actualCashFlow: 0,
-    totalReceivables: 0,
-    totalPayables: 0,
-    overdueShipperAmount: 0,
-    overdueCarrierAmount: 0,
+  projectedCashFlow: 0,
+  actualCashFlow: 0,
+  totalReceivables: 0,
+  totalPayables: 0,
+  overdueShipperAmount: 0,
+  overdueCarrierAmount: 0
   });
-
-  // --- Auth session setup ---
   useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data?.session) {
-        setSession(data.session);
-        supabase.auth.setAuth(data.session.access_token);
-      }
-    };
-    getSession();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.access_token) supabase.auth.setAuth(session.access_token);
-    });
-
-    return () => listener.subscription.unsubscribe();
-  }, []);
-
-  // --- Load KPIs ---
-  useEffect(() => {
-    const loadKPIs = async () => {
-      const res = await fetchKPIs(); // no user needed anymore
-      if (res.success) setKpis(res.kpis);
-      else console.error("Failed to fetch KPIs:", res.error);
-    };
-    loadKPIs();
-  }, [invoices]);
-
-  // --- Precompute flagged reasons ---
-  const flaggedReasonMap = useMemo(() => {
-    const map = {};
-    invoices.forEach(inv => {
-      map[inv.id] = getFlaggedReason(inv, invoices);
-    });
-    return map;
-  }, [invoices]);
-
-  // --- Fetch invoices ---
-  const fetchInvoices = async (reset = false) => {
-    if (loadingInvoices) return;
-    setLoadingInvoices(true);
-    try {
-      const cursor = reset ? null : lastCursor;
-      const pageSize = 50;
-      const res = await fetchInvoicesPaginated(pageSize, cursor); // no user passed
-
-      if (res.success) {
-        const normalizedData = (res.data || []).map(inv => ({
-          ...inv,
-          total_charge: parseFloat(inv.total_charge || 0),
-          carrier_pay: parseFloat(inv.carrier_pay || 0),
-          bill_date: inv.bill_date ? new Date(inv.bill_date + "T00:00:00Z") : null,
-          shipper_due: inv.shipper_due ? new Date(inv.shipper_due + "T00:00:00Z") : null,
-          carrier_due: inv.carrier_due ? new Date(inv.carrier_due + "T00:00:00Z") : null,
-          shipper_paid: !!inv.shipper_paid,
-          carrier_paid: !!inv.carrier_paid,
-        }));
-
-        setInvoices(prev => (reset ? normalizedData : [...prev, ...normalizedData]));
-        setLastCursor(res.nextCursor);
-        setHasMore(res.nextCursor !== null);
-      } else {
-        console.error("Error fetching invoices:", res.error);
-      }
-    } catch (err) {
-      console.error("Error fetching invoices:", err);
-    }
-    setLoadingInvoices(false);
+  const loadKPIs = async () => {
+    const res = await fetchKPIs(userEmail); // call backend
+    if (res.success) setKpis(res.kpis);      // update frontend state
+    else console.error("Failed to fetch KPIs:", res.error);
   };
 
-  // --- Logout ---
+
+  loadKPIs();
+}, [invoices, userEmail]); // re-run whenever invoices list changes
+
+
+  // Fetch invoices
+  const fetchInvoices = async (reset = false) => {
+  if (loadingInvoices) return;
+
+
+  setLoadingInvoices(true);
+
+
+  try {
+    const cursor = reset ? null : lastCursor;
+    const pageSize = 50;
+    const res = await fetchInvoicesPaginated(userEmail, pageSize, cursor);
+
+
+    if (res.success) {
+      const normalizedData = (res.data || []).map(inv => ({
+        ...inv,
+        total_charge: parseFloat(inv.total_charge || 0),
+        carrier_pay: parseFloat(inv.carrier_pay || 0),
+        bill_date: inv.bill_date ? new Date(inv.bill_date + "T00:00:00Z") : null,
+        shipper_due: inv.shipper_due ? new Date(inv.shipper_due + "T00:00:00Z") : null,
+        carrier_due: inv.carrier_due ? new Date(inv.carrier_due + "T00:00:00Z") : null,
+        shipper_paid: !!inv.shipper_paid,
+        carrier_paid: !!inv.carrier_paid
+      }));
+
+
+      setInvoices(prev => reset ? normalizedData : [...prev, ...normalizedData]);
+      setLastCursor(res.nextCursor);
+      setHasMore(res.nextCursor !== null);
+    } else {
+      console.error("Error fetching invoices:", res.error);
+    }
+  } catch (err) {
+    console.error("Error fetching invoices:", err);
+  }
+
+
+  setLoadingInvoices(false);
+};
+
+
+  // Precompute flagged reasons per broker
+  const flaggedReasonMap = useMemo(() => {
+    const map = {};
+    const brokerInvoices = invoices.filter(inv => inv.broker_email === userEmail);
+    brokerInvoices.forEach(inv => {
+      map[inv.id] = getFlaggedReason(inv, brokerInvoices);
+    });
+    return map;
+  }, [invoices, userEmail]);
+
+
+  // Logout
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = "/";
   };
 
-  // --- Refresh after upload ---
+
+  // Refresh invoice list after upload
   const handleInvoiceUpload = async () => {
-    await fetchInvoices(true);
+    await fetchInvoices(true); // reset pagination after upload
   };
 
-  // --- Toggle paid checkbox ---
+
+  // Toggle single paid checkbox
   const handlePaidToggle = async (invoiceId, field, currentValue) => {
     const updatedInvoices = invoices.map(inv =>
       inv.id === invoiceId ? { ...inv, [field]: !currentValue } : inv
     );
     setInvoices(updatedInvoices);
 
-    const res = await updateInvoiceStatus(invoiceId, field, !currentValue); // no user
+
+    const res = await updateInvoiceStatus(invoiceId, field, !currentValue);
     if (!res.success) {
       setInvoices(invoices);
       alert(`Update failed: ${res.error}`);
     }
   };
 
-  if (!session) return <div>Loading...</div>;
 
-  // --- Components ---
+  // === Components ===
   const Filters = ({ searchQuery, onSearchChange }) => (
     <div className="quick-actions horizontal">
       <input
@@ -139,16 +134,19 @@ export default function Frontend() {
     </div>
   );
 
-  const UploadCSV = ({ onUpload }) => {
+
+  const UploadCSV = ({ onUpload, brokerEmail }) => {
     const fileInputRefInner = useRef(null);
+
 
     const handleFileChange = async (event) => {
       const file = event.target.files[0];
       if (!file) return;
 
+
       setUploadStatus("Uploading...");
       try {
-        const result = await uploadInvoiceFile(file); // no user
+        const result = await uploadInvoiceFile(file, brokerEmail);
         if (result.success) {
           setUploadStatus("✅ Uploaded successfully!");
           if (onUpload) onUpload();
@@ -159,8 +157,10 @@ export default function Frontend() {
         setUploadStatus(`❌ Upload failed: ${err.message}`);
       }
 
+
       if (fileInputRefInner.current) fileInputRefInner.current.value = "";
     };
+
 
     return (
       <div className="quick-actions horizontal">
@@ -179,8 +179,10 @@ export default function Frontend() {
     );
   };
 
+
   const NetCashSummary = ({ kpis }) => {
     if (!kpis) return null;
+
 
     const kpiList = [
       { label: "Projected Net Cash Flow", value: kpis.projectedCashFlow, dot: "green" },
@@ -190,6 +192,7 @@ export default function Frontend() {
       { label: "Overdue Shipper Amount", value: kpis.overdueShipperAmount, dot: "red" },
       { label: "Overdue Carrier Amount", value: kpis.overdueCarrierAmount, dot: "red" },
     ];
+
 
     return (
       <div className="kpi-bar">
@@ -207,26 +210,34 @@ export default function Frontend() {
     );
   };
 
+
   const InvoiceTable = ({ invoices, searchQuery }) => {
     if (!invoices) return null;
+
 
     const filteredInvoices = invoices.filter((inv) =>
       JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const formatDue = (date) => (date ? new Date(date).toLocaleDateString() : "—");
 
+    const formatDue = (date) => date ? new Date(date).toLocaleDateString() : "—";
+
+
+    // 🔹 Dashboard Sorting Logic
     const sortedInvoices = [...filteredInvoices].sort((a, b) => {
       const aFullyPaid = a.shipper_paid && a.carrier_paid;
       const bFullyPaid = b.shipper_paid && b.carrier_paid;
 
+
       if (aFullyPaid && !bFullyPaid) return 1;
       if (!aFullyPaid && bFullyPaid) return -1;
+
 
       const aDate = a.bill_date ? new Date(a.bill_date) : new Date(0);
       const bDate = b.bill_date ? new Date(b.bill_date) : new Date(0);
       return aDate - bDate;
     });
+
 
     return (
       <div className="card" style={{ margin: "0 24px 24px" }}>
@@ -260,6 +271,8 @@ export default function Frontend() {
                   </td>
                 </tr>
               )}
+
+
               {sortedInvoices.map((inv) => {
                 const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
                 const shipperTermsDisplay = inv.shipper_due
@@ -269,8 +282,10 @@ export default function Frontend() {
                   ? `Net 15 - ${formatDue(inv.carrier_due)}`
                   : "Net 15 - —";
 
+
                 const flaggedReason = flaggedReasonMap[inv.id];
                 const rowClass = flaggedReason ? "row-flagged" : "";
+
 
                 return (
                   <tr key={inv.id} className={rowClass}>
@@ -300,7 +315,11 @@ export default function Frontend() {
                     </td>
                     <td className="numeric">${netCash.toFixed(2)}</td>
                     <td>{flaggedReason || "—"}</td>
-                    <td>{inv.file_url ? <a href={inv.file_url} target="_blank" rel="noreferrer">View</a> : "—"}</td>
+                    <td>
+                      {inv.file_url ? (
+                        <a href={inv.file_url} target="_blank" rel="noreferrer">View</a>
+                      ) : "—"}
+                    </td>
                   </tr>
                 );
               })}
@@ -311,10 +330,17 @@ export default function Frontend() {
     );
   };
 
+
+  // ======================
+  // CSV Download
+  // ======================
   const downloadReport = async () => {
     if (!invoices || invoices.length === 0) return alert("No invoices to download.");
 
+
     setCsvDownloading(true);
+
+
     try {
       const { downloadCSV } = await import("../features/exportCSV");
       downloadCSV(invoices, `TallyHauls_Report_${new Date().toISOString()}.csv`);
@@ -322,37 +348,42 @@ export default function Frontend() {
       console.error("CSV download failed:", err);
       alert("CSV download failed: " + err.message);
     }
+
+
     setCsvDownloading(false);
   };
+
 
   return (
     <div className="dashboard-container p-4">
       <header className="dashboard-header flex justify-between items-center mb-4">
         <img src="/logo.png" alt="TallyHauls" className="logo h-10" />
-        <div>
-          <span style={{ marginRight: "16px" }}>Logged in as: {session?.user?.email}</span>
-          <button className="logout-btn" onClick={handleLogout}>Logout</button>
-        </div>
+        <button className="logout-btn" onClick={handleLogout}>Logout</button>
       </header>
 
+
       <div className="quick-actions flex items-center gap-4 mb-4">
-        <UploadCSV onUpload={handleInvoiceUpload} />
+        <UploadCSV onUpload={handleInvoiceUpload} brokerEmail={userEmail} />
         <button className="qa-btn" onClick={downloadReport} disabled={csvDownloading}>
           {csvDownloading ? "Please wait..." : "Download Report"}
         </button>
         <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       </div>
 
+
       <NetCashSummary kpis={kpis} />
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
 
+
       {hasMore && (
         <div style={{ textAlign: "center", margin: "16px 0" }}>
-          <button onClick={() => fetchInvoices()} disabled={loadingInvoices}>
-            {loadingInvoices ? "Loading..." : "Load More"}
-          </button>
-        </div>
-      )}
+         <button onClick={() => fetchInvoices()} disabled={loadingInvoices}>
+          {loadingInvoices ? "Loading..." : "Load More"}
+         </button>
+       </div>
+    )}
+
+
     </div>
   );
 }
