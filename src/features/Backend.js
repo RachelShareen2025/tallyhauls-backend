@@ -6,8 +6,11 @@ import { parseInvoiceCSV } from "./parser";
    1️⃣ KPI Calculations
 ----------------------------- */
 function getTodayUTC() {
-  const d = new Date();
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  return new Date(Date.UTC(
+    new Date().getUTCFullYear(),
+    new Date().getUTCMonth(),
+    new Date().getUTCDate()
+  ));
 }
 
 export function calculateProjectedNetCashFlow(rows) {
@@ -17,25 +20,37 @@ export function calculateProjectedNetCashFlow(rows) {
 }
 
 export function calculateActualNetCashFlow(rows) {
-  const collected = rows.filter(r => r.shipper_paid).reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
-  const paid = rows.filter(r => r.carrier_paid).reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
+  const collected = rows
+    .filter(r => r.shipper_paid)
+    .reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
+
+  const paid = rows
+    .filter(r => r.carrier_paid)
+    .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
+
   return parseFloat((collected - paid).toFixed(2));
 }
 
 export function calculateTotalReceivables(rows) {
-  return rows.filter(r => !r.shipper_paid).reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
+  return rows
+    .filter(r => !r.shipper_paid)
+    .reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
 }
 
 export function calculateTotalPayables(rows) {
-  return rows.filter(r => !r.carrier_paid).reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
+  return rows
+    .filter(r => !r.carrier_paid)
+    .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
 }
 
 export function calculateOverdueShipperAmount(rows) {
   const todayUTC = getTodayUTC();
   return rows.reduce((sum, r) => {
     if (!r.shipper_paid && r.shipper_due) {
-      const due = new Date(r.shipper_due);
-      if (!isNaN(due) && todayUTC > due) sum += Number(r.total_charge || 0);
+      const dueUTC = new Date(r.shipper_due);
+      if (!isNaN(dueUTC) && todayUTC > dueUTC) {
+        return sum + Number(r.total_charge || 0);
+      }
     }
     return sum;
   }, 0);
@@ -45,8 +60,10 @@ export function calculateOverdueCarrierAmount(rows) {
   const todayUTC = getTodayUTC();
   return rows.reduce((sum, r) => {
     if (!r.carrier_paid && r.carrier_due) {
-      const due = new Date(r.carrier_due);
-      if (!isNaN(due) && todayUTC > due) sum += Number(r.carrier_pay || 0);
+      const dueUTC = new Date(r.carrier_due);
+      if (!isNaN(dueUTC) && todayUTC > dueUTC) {
+        return sum + Number(r.carrier_pay || 0);
+      }
     }
     return sum;
   }, 0);
@@ -93,7 +110,8 @@ export async function fetchKPIs(sessionUser, pageSize = 100) {
       moreRows = data.length === pageSize;
     }
 
-    return { success: true, kpis: computeKPIs(allInvoices) };
+    const kpis = computeKPIs(allInvoices);
+    return { success: true, kpis };
   } catch (err) {
     console.error("Fetch KPIs failed:", err.message);
     return { success: false, error: err.message };
@@ -111,10 +129,10 @@ export async function insertInvoices(rows, fileUrl, sessionUser) {
       const billDateObj = row.bill_date ? new Date(row.bill_date) : null;
       return {
         ...row,
-        broker_email: sessionUser.email,
+        broker_email: sessionUser.email, // ✅ RLS-safe
         file_url: fileUrl,
-        shipper_due: row.shipper_due || (billDateObj ? new Date(billDateObj.getTime() + 30*86400000).toISOString().split("T")[0] : null),
-        carrier_due: row.carrier_due || (billDateObj ? new Date(billDateObj.getTime() + 15*86400000).toISOString().split("T")[0] : null),
+        shipper_due: row.shipper_due || (billDateObj ? new Date(billDateObj.getTime() + 30 * 86400000).toISOString().split("T")[0] : null),
+        carrier_due: row.carrier_due || (billDateObj ? new Date(billDateObj.getTime() + 15 * 86400000).toISOString().split("T")[0] : null),
       };
     });
 
@@ -137,10 +155,14 @@ export async function uploadFileToStorage(file, isFailed = false) {
     const folder = isFailed ? "failed_csvs" : "invoices";
     const filePath = `${folder}/${Date.now()}_${file.name}`;
 
-    const { data: uploadData, error: uploadError } = await supabase.storage.from(folder).upload(filePath, file);
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(folder)
+      .upload(filePath, file);
     if (uploadError) throw uploadError;
 
-    const { data: publicUrlData, error: publicUrlError } = await supabase.storage.from(folder).getPublicUrl(uploadData.path);
+    const { data: publicUrlData, error: publicUrlError } = await supabase.storage
+      .from(folder)
+      .getPublicUrl(uploadData.path);
     if (publicUrlError) throw publicUrlError;
 
     return { success: true, fileUrl: publicUrlData.publicUrl };
@@ -202,7 +224,28 @@ export async function updateInvoiceStatus(invoiceId, field, value, sessionUser) 
 }
 
 /* -----------------------------
-   7️⃣ Compute & Update Status
+   7️⃣ Bulk Update Invoice Status
+----------------------------- */
+export async function bulkUpdateInvoiceStatus(invoiceIds, field, value, sessionUser) {
+  if (!sessionUser?.email) return { success: false, error: "User session missing." };
+
+  try {
+    const { error } = await supabase
+      .from("invoices")
+      .update({ [field]: value, updated_at: new Date().toISOString() })
+      .in("id", invoiceIds)
+      .eq("broker_email", sessionUser.email);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error("Bulk update failed:", err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+/* -----------------------------
+   8️⃣ Compute & Update Status
 ----------------------------- */
 export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };
@@ -212,7 +255,8 @@ export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
     let moreRows = true;
 
     while (moreRows) {
-      let query = supabase.from("invoices")
+      let query = supabase
+        .from("invoices")
         .select("*")
         .order("id", { ascending: true })
         .limit(pageSize)
@@ -226,6 +270,7 @@ export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
 
       const updates = invoices.map(inv => {
         let newStatus = "pending";
+
         if (inv.flagged_reason) newStatus = "flagged";
         else if (inv.shipper_paid && inv.carrier_paid) newStatus = "paid";
         else {
@@ -239,12 +284,14 @@ export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
           }
         }
 
-        return { id: inv.id, status: newStatus, broker_email: sessionUser.email };
+        return { id: inv.id, status: newStatus, broker_email: sessionUser.email }; // ✅ include broker_email for RLS
       });
 
       for (let i = 0; i < updates.length; i += 50) {
         const batch = updates.slice(i, i + 50);
-        const { error: updateError } = await supabase.from("invoices").upsert(batch, { onConflict: ["id"] });
+        const { error: updateError } = await supabase
+          .from("invoices")
+          .upsert(batch, { onConflict: ["id"] });
         if (updateError) console.error("Status update error:", updateError.message);
       }
 
@@ -260,13 +307,14 @@ export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
 }
 
 /* -----------------------------
-   8️⃣ Fetch Invoices Paginated
+   9️⃣ Fetch Invoices Paginated
 ----------------------------- */
 export async function fetchInvoicesPaginated(sessionUser, pageSize = 50, cursor = null) {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };
 
   try {
-    let query = supabase.from("invoices")
+    let query = supabase
+      .from("invoices")
       .select("*")
       .order("id", { ascending: true })
       .limit(pageSize)
@@ -278,6 +326,7 @@ export async function fetchInvoicesPaginated(sessionUser, pageSize = 50, cursor 
     if (error) throw error;
 
     const nextCursor = data.length === pageSize ? data[data.length - 1].id : null;
+
     return { success: true, data, nextCursor };
   } catch (err) {
     console.error("Fetch invoices paginated failed:", err.message);
