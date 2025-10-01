@@ -29,22 +29,7 @@ export default function Frontend() {
   });
 
   // --- Auth session setup ---
-  useEffect(() => {
-  // Fetch initial session
-  const getSession = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    setSession(session);
-  };
-  getSession();
-
-  // Listen for auth changes
-  const { subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-    setSession(session);
-  });
-
-  return () => subscription.unsubscribe();
-}, []);
-
+  
 
   const user = session?.user;
 
