@@ -2,6 +2,7 @@
 import { supabase } from "../supabaseClient";
 import { parseInvoiceCSV } from "./parser";
 
+
 /* -----------------------------
    1️⃣ KPI Calculations
 ----------------------------- */
@@ -13,23 +14,28 @@ function getTodayUTC() {
   ));
 }
 
+
 export function calculateProjectedNetCashFlow(rows) {
   const totalCharges = rows.reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
   const totalCarrierPay = rows.reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
   return parseFloat((totalCharges - totalCarrierPay).toFixed(2));
 }
 
+
 export function calculateActualNetCashFlow(rows) {
   const collected = rows
     .filter(r => r.shipper_paid)
     .reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
 
+
   const paid = rows
     .filter(r => r.carrier_paid)
     .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
 
+
   return parseFloat((collected - paid).toFixed(2));
 }
+
 
 export function calculateTotalReceivables(rows) {
   return rows
@@ -37,11 +43,13 @@ export function calculateTotalReceivables(rows) {
     .reduce((sum, r) => sum + Number(r.total_charge || 0), 0);
 }
 
+
 export function calculateTotalPayables(rows) {
   return rows
     .filter(r => !r.carrier_paid)
     .reduce((sum, r) => sum + Number(r.carrier_pay || 0), 0);
 }
+
 
 export function calculateOverdueShipperAmount(rows) {
   const todayUTC = getTodayUTC();
@@ -56,6 +64,7 @@ export function calculateOverdueShipperAmount(rows) {
   }, 0);
 }
 
+
 export function calculateOverdueCarrierAmount(rows) {
   const todayUTC = getTodayUTC();
   return rows.reduce((sum, r) => {
@@ -69,6 +78,7 @@ export function calculateOverdueCarrierAmount(rows) {
   }, 0);
 }
 
+
 export function computeKPIs(rows) {
   return {
     projectedCashFlow: calculateProjectedNetCashFlow(rows),
@@ -80,16 +90,19 @@ export function computeKPIs(rows) {
   };
 }
 
+
 /* -----------------------------
    2️⃣ Fetch KPIs
 ----------------------------- */
 export async function fetchKPIs(sessionUser, pageSize = 100) {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };
 
+
   try {
     let allInvoices = [];
     let lastId = null;
     let moreRows = true;
+
 
     while (moreRows) {
       let query = supabase
@@ -99,16 +112,20 @@ export async function fetchKPIs(sessionUser, pageSize = 100) {
         .limit(pageSize)
         .eq("broker_email", sessionUser.email);
 
+
       if (lastId) query = query.gt("id", lastId);
+
 
       const { data, error } = await query;
       if (error) throw error;
       if (!data || data.length === 0) break;
 
+
       allInvoices = [...allInvoices, ...data];
       lastId = data[data.length - 1].id;
       moreRows = data.length === pageSize;
     }
+
 
     const kpis = computeKPIs(allInvoices);
     return { success: true, kpis };
@@ -118,41 +135,30 @@ export async function fetchKPIs(sessionUser, pageSize = 100) {
   }
 }
 
+
 /* -----------------------------
    3️⃣ Insert Invoices (RLS SAFE)
 ----------------------------- */
 export async function insertInvoices(rows, fileUrl, sessionUser) {
   if (!rows || rows.length === 0) return { success: false, error: "No rows to insert." };
 
+
   try {
     const rowsWithDueDates = rows.map(row => {
-  let billDateObj = null;
-  if (row.bill_date) {
-    const parts = row.bill_date.split(/[-\/]/);
-    if (parts.length === 3) {
-      if (row.bill_date.includes("/")) {
-        // MM/DD/YYYY → YYYY-MM-DD
-        billDateObj = new Date(`${parts[2]}-${parts[0]}-${parts[1]}T00:00:00Z`);
-      } else {
-        // YYYY-MM-DD
-        billDateObj = new Date(`${parts[0]}-${parts[1]}-${parts[2]}T00:00:00Z`);
-      }
-    }
-  }
-
-  return {
-    ...row,
-    broker_email: sessionUser.email,
-    file_url: fileUrl,
-    bill_date: billDateObj ? billDateObj.toISOString().split("T")[0] : null,
-    shipper_due: row.shipper_due || (billDateObj ? new Date(billDateObj.getTime() + 30*86400000).toISOString().split("T")[0] : null),
-    carrier_due: row.carrier_due || (billDateObj ? new Date(billDateObj.getTime() + 15*86400000).toISOString().split("T")[0] : null),
-  };
-});
+      const billDateObj = row.bill_date ? new Date(row.bill_date) : null;
+      return {
+        ...row,
+        broker_email: sessionUser.email, // ✅ RLS-safe
+        file_url: fileUrl,
+        shipper_due: row.shipper_due || (billDateObj ? new Date(billDateObj.getTime() + 30 * 86400000).toISOString().split("T")[0] : null),
+        carrier_due: row.carrier_due || (billDateObj ? new Date(billDateObj.getTime() + 15 * 86400000).toISOString().split("T")[0] : null),
+      };
+    });
 
 
     const { error } = await supabase.from("invoices").insert(rowsWithDueDates);
     if (error) throw error;
+
 
     return { success: true };
   } catch (err) {
@@ -160,6 +166,7 @@ export async function insertInvoices(rows, fileUrl, sessionUser) {
     return { success: false, error: err.message };
   }
 }
+
 
 /* -----------------------------
    4️⃣ Upload File to Storage
@@ -170,15 +177,18 @@ export async function uploadFileToStorage(file, isFailed = false) {
     const folder = isFailed ? "failed_csvs" : "invoices";
     const filePath = `${folder}/${Date.now()}_${file.name}`;
 
+
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(folder)
       .upload(filePath, file);
     if (uploadError) throw uploadError;
 
+
     const { data: publicUrlData, error: publicUrlError } = await supabase.storage
       .from(folder)
       .getPublicUrl(uploadData.path);
     if (publicUrlError) throw publicUrlError;
+
 
     return { success: true, fileUrl: publicUrlData.publicUrl };
   } catch (err) {
@@ -187,15 +197,18 @@ export async function uploadFileToStorage(file, isFailed = false) {
   }
 }
 
+
 /* -----------------------------
    5️⃣ Upload & Insert Invoices
 ----------------------------- */
 export async function uploadInvoiceFile(file, sessionUser) {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };
 
+
   try {
     const storageRes = await uploadFileToStorage(file);
     if (!storageRes.success) return storageRes;
+
 
     const fileText = await file.text();
     let parsedRows;
@@ -206,9 +219,11 @@ export async function uploadInvoiceFile(file, sessionUser) {
       return { success: false, error: `CSV parsing failed: ${err.message}` };
     }
 
+
     const dbRes = await insertInvoices(parsedRows, storageRes.fileUrl, sessionUser);
     await computeAndUpdateStatus(sessionUser);
     if (!dbRes.success) return dbRes;
+
 
     return { success: true, fileUrl: storageRes.fileUrl };
   } catch (err) {
@@ -217,11 +232,13 @@ export async function uploadInvoiceFile(file, sessionUser) {
   }
 }
 
+
 /* -----------------------------
    6️⃣ Update Invoice Status
 ----------------------------- */
 export async function updateInvoiceStatus(invoiceId, field, value, sessionUser) {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };
+
 
   try {
     const { error } = await supabase
@@ -229,6 +246,7 @@ export async function updateInvoiceStatus(invoiceId, field, value, sessionUser) 
       .update({ [field]: value, updated_at: new Date().toISOString() })
       .eq("id", invoiceId)
       .eq("broker_email", sessionUser.email);
+
 
     if (error) throw error;
     return { success: true };
@@ -238,11 +256,13 @@ export async function updateInvoiceStatus(invoiceId, field, value, sessionUser) 
   }
 }
 
+
 /* -----------------------------
    7️⃣ Bulk Update Invoice Status
 ----------------------------- */
 export async function bulkUpdateInvoiceStatus(invoiceIds, field, value, sessionUser) {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };
+
 
   try {
     const { error } = await supabase
@@ -250,6 +270,7 @@ export async function bulkUpdateInvoiceStatus(invoiceIds, field, value, sessionU
       .update({ [field]: value, updated_at: new Date().toISOString() })
       .in("id", invoiceIds)
       .eq("broker_email", sessionUser.email);
+
 
     if (error) throw error;
     return { success: true };
@@ -259,15 +280,18 @@ export async function bulkUpdateInvoiceStatus(invoiceIds, field, value, sessionU
   }
 }
 
+
 /* -----------------------------
    8️⃣ Compute & Update Status
 ----------------------------- */
 export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };
 
+
   try {
     let lastId = null;
     let moreRows = true;
+
 
     while (moreRows) {
       let query = supabase
@@ -277,14 +301,18 @@ export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
         .limit(pageSize)
         .eq("broker_email", sessionUser.email);
 
+
       if (lastId) query = query.gt("id", lastId);
+
 
       const { data: invoices, error: fetchError } = await query;
       if (fetchError) throw fetchError;
       if (!invoices || invoices.length === 0) break;
 
+
       const updates = invoices.map(inv => {
         let newStatus = "pending";
+
 
         if (inv.flagged_reason) newStatus = "flagged";
         else if (inv.shipper_paid && inv.carrier_paid) newStatus = "paid";
@@ -293,14 +321,17 @@ export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
           const shipperDue = inv.shipper_due ? new Date(inv.shipper_due) : null;
           const carrierDue = inv.carrier_due ? new Date(inv.carrier_due) : null;
 
+
           if ((!inv.shipper_paid && shipperDue && shipperDue < today) ||
               (!inv.carrier_paid && carrierDue && carrierDue < today)) {
             newStatus = "overdue";
           }
         }
 
+
         return { id: inv.id, status: newStatus, broker_email: sessionUser.email }; // ✅ include broker_email for RLS
       });
+
 
       for (let i = 0; i < updates.length; i += 50) {
         const batch = updates.slice(i, i + 50);
@@ -310,9 +341,11 @@ export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
         if (updateError) console.error("Status update error:", updateError.message);
       }
 
+
       lastId = invoices[invoices.length - 1].id;
       moreRows = invoices.length === pageSize;
     }
+
 
     return { success: true };
   } catch (err) {
@@ -321,11 +354,13 @@ export async function computeAndUpdateStatus(sessionUser, pageSize = 100) {
   }
 }
 
+
 /* -----------------------------
    9️⃣ Fetch Invoices Paginated
 ----------------------------- */
 export async function fetchInvoicesPaginated(sessionUser, pageSize = 50, cursor = null) {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };
+
 
   try {
     let query = supabase
@@ -335,12 +370,16 @@ export async function fetchInvoicesPaginated(sessionUser, pageSize = 50, cursor 
       .limit(pageSize)
       .eq("broker_email", sessionUser.email);
 
+
     if (cursor) query = query.gt("id", cursor);
+
 
     const { data, error } = await query;
     if (error) throw error;
 
+
     const nextCursor = data.length === pageSize ? data[data.length - 1].id : null;
+
 
     return { success: true, data, nextCursor };
   } catch (err) {
@@ -348,3 +387,5 @@ export async function fetchInvoicesPaginated(sessionUser, pageSize = 50, cursor 
     return { success: false, error: err.message };
   }
 }
+
+

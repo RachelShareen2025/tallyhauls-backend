@@ -10,6 +10,7 @@ import {
 import { getFlaggedReason } from "../features/flaggedReasons";
 import "./Dashboard.css";
 
+
 export default function Frontend() {
   const [session, setSession] = useState(null);
   const [invoices, setInvoices] = useState([]);
@@ -28,14 +29,36 @@ export default function Frontend() {
     overdueCarrierAmount: 0,
   });
 
+
   // --- Auth session setup ---
-  
+  useEffect(() => {
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session) {
+        setSession(data.session);
+        supabase.auth.setAuth(data.session.access_token);
+      }
+    };
+    getSession();
+
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.access_token) supabase.auth.setAuth(session.access_token);
+    });
+
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
 
   const user = session?.user;
+
 
   // --- Load KPIs ---
   useEffect(() => {
     if (!user) return;
+
 
     const loadKPIs = async () => {
       const res = await fetchKPIs(user);
@@ -44,6 +67,7 @@ export default function Frontend() {
     };
     loadKPIs();
   }, [invoices, user]);
+
 
   // --- Precompute flagged reasons ---
   const flaggedReasonMap = useMemo(() => {
@@ -54,6 +78,7 @@ export default function Frontend() {
     return map;
   }, [invoices]);
 
+
   // --- Fetch invoices ---
   const fetchInvoices = async (reset = false) => {
     if (!user || loadingInvoices) return;
@@ -62,6 +87,7 @@ export default function Frontend() {
       const cursor = reset ? null : lastCursor;
       const pageSize = 50;
       const res = await fetchInvoicesPaginated(user, pageSize, cursor);
+
 
       if (res.success) {
         const normalizedData = (res.data || []).map(inv => ({
@@ -75,6 +101,7 @@ export default function Frontend() {
           carrier_paid: !!inv.carrier_paid,
         }));
 
+
         setInvoices(prev => (reset ? normalizedData : [...prev, ...normalizedData]));
         setLastCursor(res.nextCursor);
         setHasMore(res.nextCursor !== null);
@@ -87,16 +114,19 @@ export default function Frontend() {
     setLoadingInvoices(false);
   };
 
+
   // --- Logout ---
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = "/";
   };
 
+
   // --- Refresh after upload ---
   const handleInvoiceUpload = async () => {
     await fetchInvoices(true);
   };
+
 
   // --- Toggle paid checkbox ---
   const handlePaidToggle = async (invoiceId, field, currentValue) => {
@@ -105,6 +135,7 @@ export default function Frontend() {
     );
     setInvoices(updatedInvoices);
 
+
     const res = await updateInvoiceStatus(invoiceId, field, !currentValue, user);
     if (!res.success) {
       setInvoices(invoices);
@@ -112,7 +143,9 @@ export default function Frontend() {
     }
   };
 
+
   if (!session) return <div>Loading...</div>;
+
 
   // --- Components ---
   const Filters = ({ searchQuery, onSearchChange }) => (
@@ -127,12 +160,15 @@ export default function Frontend() {
     </div>
   );
 
+
   const UploadCSV = ({ onUpload }) => {
     const fileInputRefInner = useRef(null);
+
 
     const handleFileChange = async (event) => {
       const file = event.target.files[0];
       if (!file) return;
+
 
       setUploadStatus("Uploading...");
       try {
@@ -147,8 +183,10 @@ export default function Frontend() {
         setUploadStatus(`❌ Upload failed: ${err.message}`);
       }
 
+
       if (fileInputRefInner.current) fileInputRefInner.current.value = "";
     };
+
 
     return (
       <div className="quick-actions horizontal">
@@ -167,8 +205,10 @@ export default function Frontend() {
     );
   };
 
+
   const NetCashSummary = ({ kpis }) => {
     if (!kpis) return null;
+
 
     const kpiList = [
       { label: "Projected Net Cash Flow", value: kpis.projectedCashFlow, dot: "green" },
@@ -178,6 +218,7 @@ export default function Frontend() {
       { label: "Overdue Shipper Amount", value: kpis.overdueShipperAmount, dot: "red" },
       { label: "Overdue Carrier Amount", value: kpis.overdueCarrierAmount, dot: "red" },
     ];
+
 
     return (
       <div className="kpi-bar">
@@ -195,26 +236,33 @@ export default function Frontend() {
     );
   };
 
+
   const InvoiceTable = ({ invoices, searchQuery }) => {
     if (!invoices) return null;
+
 
     const filteredInvoices = invoices.filter((inv) =>
       JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+
     const formatDue = (date) => (date ? new Date(date).toLocaleDateString() : "—");
+
 
     const sortedInvoices = [...filteredInvoices].sort((a, b) => {
       const aFullyPaid = a.shipper_paid && a.carrier_paid;
       const bFullyPaid = b.shipper_paid && b.carrier_paid;
 
+
       if (aFullyPaid && !bFullyPaid) return 1;
       if (!aFullyPaid && bFullyPaid) return -1;
+
 
       const aDate = a.bill_date ? new Date(a.bill_date) : new Date(0);
       const bDate = b.bill_date ? new Date(b.bill_date) : new Date(0);
       return aDate - bDate;
     });
+
 
     return (
       <div className="card" style={{ margin: "0 24px 24px" }}>
@@ -257,8 +305,10 @@ export default function Frontend() {
                   ? `Net 15 - ${formatDue(inv.carrier_due)}`
                   : "Net 15 - —";
 
+
                 const flaggedReason = flaggedReasonMap[inv.id];
                 const rowClass = flaggedReason ? "row-flagged" : "";
+
 
                 return (
                   <tr key={inv.id} className={rowClass}>
@@ -299,8 +349,10 @@ export default function Frontend() {
     );
   };
 
+
   const downloadReport = async () => {
     if (!invoices || invoices.length === 0) return alert("No invoices to download.");
+
 
     setCsvDownloading(true);
     try {
@@ -313,6 +365,7 @@ export default function Frontend() {
     setCsvDownloading(false);
   };
 
+
   return (
     <div className="dashboard-container p-4">
       <header className="dashboard-header flex justify-between items-center mb-4">
@@ -323,6 +376,7 @@ export default function Frontend() {
         </div>
       </header>
 
+
       <div className="quick-actions flex items-center gap-4 mb-4">
         <UploadCSV onUpload={handleInvoiceUpload} />
         <button className="qa-btn" onClick={downloadReport} disabled={csvDownloading}>
@@ -331,8 +385,10 @@ export default function Frontend() {
         <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       </div>
 
+
       <NetCashSummary kpis={kpis} />
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
+
 
       {hasMore && (
         <div style={{ textAlign: "center", margin: "16px 0" }}>
@@ -344,3 +400,5 @@ export default function Frontend() {
     </div>
   );
 }
+
+
