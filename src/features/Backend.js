@@ -126,15 +126,30 @@ export async function insertInvoices(rows, fileUrl, sessionUser) {
 
   try {
     const rowsWithDueDates = rows.map(row => {
-      const billDateObj = row.bill_date ? new Date(row.bill_date) : null;
-      return {
-        ...row,
-        broker_email: sessionUser.email, // ✅ RLS-safe
-        file_url: fileUrl,
-        shipper_due: row.shipper_due || (billDateObj ? new Date(billDateObj.getTime() + 30 * 86400000).toISOString().split("T")[0] : null),
-        carrier_due: row.carrier_due || (billDateObj ? new Date(billDateObj.getTime() + 15 * 86400000).toISOString().split("T")[0] : null),
-      };
-    });
+  let billDateObj = null;
+  if (row.bill_date) {
+    const parts = row.bill_date.split(/[-\/]/);
+    if (parts.length === 3) {
+      if (row.bill_date.includes("/")) {
+        // MM/DD/YYYY → YYYY-MM-DD
+        billDateObj = new Date(`${parts[2]}-${parts[0]}-${parts[1]}T00:00:00Z`);
+      } else {
+        // YYYY-MM-DD
+        billDateObj = new Date(`${parts[0]}-${parts[1]}-${parts[2]}T00:00:00Z`);
+      }
+    }
+  }
+
+  return {
+    ...row,
+    broker_email: sessionUser.email,
+    file_url: fileUrl,
+    bill_date: billDateObj ? billDateObj.toISOString().split("T")[0] : null,
+    shipper_due: row.shipper_due || (billDateObj ? new Date(billDateObj.getTime() + 30*86400000).toISOString().split("T")[0] : null),
+    carrier_due: row.carrier_due || (billDateObj ? new Date(billDateObj.getTime() + 15*86400000).toISOString().split("T")[0] : null),
+  };
+});
+
 
     const { error } = await supabase.from("invoices").insert(rowsWithDueDates);
     if (error) throw error;
