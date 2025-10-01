@@ -28,26 +28,22 @@ export default function Frontend() {
     overdueCarrierAmount: 0,
   });
 
-  // --- Auth session setup ---
+  // --- Auth session setup (updated for new Supabase client) ---
   useEffect(() => {
-    const getSession = async () => {
+    const fetchSession = async () => {
       const { data } = await supabase.auth.getSession();
-      if (data?.session) {
-        setSession(data.session);
-        supabase.auth.setAuth(data.session.access_token);
-      }
+      setSession(data.session || null);
     };
-    getSession();
+    fetchSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.access_token) supabase.auth.setAuth(session.access_token);
+    const { subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
-  const user = session?.user; // ✅ helper for backend calls
+  const user = session?.user;
 
   // --- Load KPIs ---
   useEffect(() => {
@@ -152,7 +148,7 @@ export default function Frontend() {
 
       setUploadStatus("Uploading...");
       try {
-        const result = await uploadInvoiceFile(file, user); // ✅ pass user
+        const result = await uploadInvoiceFile(file, user); // ✅ pass user session
         if (result.success) {
           setUploadStatus("✅ Uploaded successfully!");
           if (onUpload) onUpload();
@@ -341,22 +337,17 @@ export default function Frontend() {
 
       <div className="quick-actions flex items-center gap-4 mb-4">
         <UploadCSV onUpload={handleInvoiceUpload} />
-        <button className="qa-btn" onClick={downloadReport} disabled={csvDownloading}>
-          {csvDownloading ? "Please wait..." : "Download Report"}
+        <button className="qa-btn" onClick={fetchInvoices} disabled={!hasMore || loadingInvoices}>
+          {loadingInvoices ? "Loading..." : hasMore ? "Load More" : "All Loaded"}
         </button>
-        <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+        <button className="qa-btn" onClick={downloadReport} disabled={csvDownloading}>
+          {csvDownloading ? "Downloading..." : "Download CSV"}
+        </button>
       </div>
 
+      <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <NetCashSummary kpis={kpis} />
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
-
-      {hasMore && (
-        <div style={{ textAlign: "center", margin: "16px 0" }}>
-          <button onClick={() => fetchInvoices()} disabled={loadingInvoices}>
-            {loadingInvoices ? "Loading..." : "Load More"}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
