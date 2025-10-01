@@ -28,7 +28,7 @@ export default function Frontend() {
     overdueCarrierAmount: 0,
   });
 
-  // --- Auth session setup (updated for new Supabase client) ---
+  // --- Auth session setup ---
   useEffect(() => {
     const fetchSession = async () => {
       const { data } = await supabase.auth.getSession();
@@ -140,7 +140,7 @@ export default function Frontend() {
   );
 
   const UploadCSV = ({ onUpload }) => {
-    const fileInputRefInner = useRef(null);
+    const fileInputRef = useRef(null);
 
     const handleFileChange = async (event) => {
       const file = event.target.files[0];
@@ -148,7 +148,7 @@ export default function Frontend() {
 
       setUploadStatus("Uploading...");
       try {
-        const result = await uploadInvoiceFile(file, user); // ✅ pass user session
+        const result = await uploadInvoiceFile(file, user);
         if (result.success) {
           setUploadStatus("✅ Uploaded successfully!");
           if (onUpload) onUpload();
@@ -159,19 +159,19 @@ export default function Frontend() {
         setUploadStatus(`❌ Upload failed: ${err.message}`);
       }
 
-      if (fileInputRefInner.current) fileInputRefInner.current.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
     return (
       <div className="quick-actions horizontal">
         <input
           type="file"
-          ref={fileInputRefInner}
+          ref={fileInputRef}
           style={{ display: "none" }}
           onChange={handleFileChange}
           accept=".csv"
         />
-        <button className="qa-btn" onClick={() => fileInputRefInner.current?.click()}>
+        <button className="qa-btn" onClick={() => fileInputRef.current?.click()}>
           Upload CSV
         </button>
         {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
@@ -277,74 +277,64 @@ export default function Frontend() {
                     <td>{inv.load_number || "—"}</td>
                     <td>{inv.bill_date ? formatDue(inv.bill_date) : "—"}</td>
                     <td>{inv.shipper || "—"}</td>
-                    <td style={{ textAlign: "center" }}>{Number(inv.total_charge || 0).toFixed(2)}</td>
+                    <td>{Number(inv.total_charge || 0).toFixed(2)}</td>
                     <td>{shipperTermsDisplay}</td>
                     <td>
                       <input
                         type="checkbox"
-                        checked={inv.shipper_paid || false}
-                        className={inv.shipper_paid ? "paid-green" : ""}
+                        checked={!!inv.shipper_paid}
                         onChange={() => handlePaidToggle(inv.id, "shipper_paid", inv.shipper_paid)}
                       />
                     </td>
                     <td>{inv.carrier || "—"}</td>
-                    <td style={{ textAlign: "center" }}>{Number(inv.carrier_pay || 0).toFixed(2)}</td>
+                    <td>{Number(inv.carrier_pay || 0).toFixed(2)}</td>
                     <td>{carrierTermsDisplay}</td>
                     <td>
                       <input
                         type="checkbox"
-                        checked={inv.carrier_paid || false}
-                        className={inv.carrier_paid ? "paid-green" : ""}
+                        checked={!!inv.carrier_paid}
                         onChange={() => handlePaidToggle(inv.id, "carrier_paid", inv.carrier_paid)}
                       />
                     </td>
-                    <td className="numeric">${netCash.toFixed(2)}</td>
+                    <td className="numeric">{netCash.toFixed(2)}</td>
                     <td>{flaggedReason || "—"}</td>
-                    <td>{inv.file_url ? <a href={inv.file_url} target="_blank" rel="noreferrer">View</a> : "—"}</td>
+                    <td>
+                      {inv.file_url ? (
+                        <a href={inv.file_url} target="_blank" rel="noopener noreferrer">
+                          CSV
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+
+        {hasMore && (
+          <div className="load-more">
+            <button className="qa-btn" onClick={() => fetchInvoices()}>
+              {loadingInvoices ? "Loading..." : "Load more"}
+            </button>
+          </div>
+        )}
       </div>
     );
   };
 
-  const downloadReport = async () => {
-    if (!invoices || invoices.length === 0) return alert("No invoices to download.");
-
-    setCsvDownloading(true);
-    try {
-      const { downloadCSV } = await import("../features/exportCSV");
-      downloadCSV(invoices, `TallyHauls_Report_${new Date().toISOString()}.csv`);
-    } catch (err) {
-      console.error("CSV download failed:", err);
-      alert("CSV download failed: " + err.message);
-    }
-    setCsvDownloading(false);
-  };
-
   return (
-    <div className="dashboard-container p-4">
-      <header className="dashboard-header flex justify-between items-center mb-4">
-        <img src="/logo.png" alt="TallyHauls" className="logo h-10" />
-        <div>
-          <span style={{ marginRight: "16px" }}>Logged in as: {user?.email}</span>
-          <button className="logout-btn" onClick={handleLogout}>Logout</button>
-        </div>
-      </header>
-
-      <div className="quick-actions flex items-center gap-4 mb-4">
-        <UploadCSV onUpload={handleInvoiceUpload} />
-        <button className="qa-btn" onClick={fetchInvoices} disabled={!hasMore || loadingInvoices}>
-          {loadingInvoices ? "Loading..." : hasMore ? "Load More" : "All Loaded"}
-        </button>
-        <button className="qa-btn" onClick={downloadReport} disabled={csvDownloading}>
-          {csvDownloading ? "Downloading..." : "Download CSV"}
+    <div className="dashboard-page">
+      <div className="dashboard-header">
+        <h1>TallyHauls Dashboard</h1>
+        <button className="qa-btn" onClick={handleLogout}>
+          Logout
         </button>
       </div>
 
+      <UploadCSV onUpload={handleInvoiceUpload} />
       <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <NetCashSummary kpis={kpis} />
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
