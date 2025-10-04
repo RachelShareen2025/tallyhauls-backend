@@ -1,25 +1,23 @@
 // src/Components/Frontend.jsx
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import {
   uploadInvoiceFile,
   updateInvoiceStatus,
   fetchInvoicesPaginated,
-  fetchKPIs,
+  fetchKPIsForBroker,
 } from "../features/Backend";
-import { getFlaggedReason } from "../features/flaggedReasons";
 import "./Dashboard.css";
-
 
 export default function Frontend() {
   const [session, setSession] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [csvDownloading, setCsvDownloading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [lastCursor, setLastCursor] = useState(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [csvDownloading, setCsvDownloading] = useState(false);
   const [kpis, setKpis] = useState({
     projectedCashFlow: 0,
     actualCashFlow: 0,
@@ -29,104 +27,91 @@ export default function Frontend() {
     overdueCarrierAmount: 0,
   });
 
+  const user = session?.user;
 
-  // --- Auth session setup ---
-  useEffect(() => {
-    const getSession = async () => {
+  // --- Auth session setup (fixed) ---
+useEffect(() => {
+  const initSession = async () => {
+    try {
       const { data } = await supabase.auth.getSession();
       if (data?.session) {
         setSession(data.session);
-        supabase.auth.setAuth(data.session.access_token);
+        // ⚡ Set JWT explicitly for RLS
+        await supabase.auth.setAuth(data.session.access_token);
       }
-    };
-    getSession();
+    } catch (err) {
+      console.error("Failed to get session:", err);
+    }
+  };
+  initSession();
 
+  const { data: listener } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    setSession(newSession);
+    if (newSession) {
+      // ⚡ Set JWT explicitly every time session changes
+      await supabase.auth.setAuth(newSession.access_token);
+    }
+  });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.access_token) supabase.auth.setAuth(session.access_token);
-    });
-
-
-    return () => listener.subscription.unsubscribe();
-  }, []);
-
-
-  const user = session?.user;
-
-
-  // --- Load KPIs ---
-  useEffect(() => {
-    if (!user) return;
-
-
-    const loadKPIs = async () => {
-      const res = await fetchKPIs(user);
-      if (res.success) setKpis(res.kpis);
-      else console.error("Failed to fetch KPIs:", res.error);
-    };
-    loadKPIs();
-  }, [invoices, user]);
-
-
-  // --- Precompute flagged reasons ---
-  const flaggedReasonMap = useMemo(() => {
-    const map = {};
-    invoices.forEach(inv => {
-      map[inv.id] = getFlaggedReason(inv, invoices);
-    });
-    return map;
-  }, [invoices]);
+  return () => listener.subscription.unsubscribe();
+}, []);
 
 
   // --- Fetch invoices ---
-  const fetchInvoices = async (reset = false) => {
-    if (!user || loadingInvoices) return;
-    setLoadingInvoices(true);
-    try {
-      const cursor = reset ? null : lastCursor;
-      const pageSize = 50;
-      const res = await fetchInvoicesPaginated(user, pageSize, cursor);
-
-
-      if (res.success) {
-        const normalizedData = (res.data || []).map(inv => ({
-          ...inv,
-          total_charge: parseFloat(inv.total_charge || 0),
-          carrier_pay: parseFloat(inv.carrier_pay || 0),
-          bill_date: inv.bill_date ? new Date(inv.bill_date + "T00:00:00Z") : null,
-          shipper_due: inv.shipper_due ? new Date(inv.shipper_due + "T00:00:00Z") : null,
-          carrier_due: inv.carrier_due ? new Date(inv.carrier_due + "T00:00:00Z") : null,
-          shipper_paid: !!inv.shipper_paid,
-          carrier_paid: !!inv.carrier_paid,
-        }));
-
-
-        setInvoices(prev => (reset ? normalizedData : [...prev, ...normalizedData]));
-        setLastCursor(res.nextCursor);
-        setHasMore(res.nextCursor !== null);
-      } else {
-        console.error("Error fetching invoices:", res.error);
+  const fetchInvoices = useCallback(
+    async (reset = false) => {
+      if (!user || loadingInvoices) return;
+      setLoadingInvoices(true);
+      try {
+        const cursor = reset ? null : lastCursor;
+        const res = await fetchInvoicesPaginated(user, 50, cursor);
+        if (res.success) {
+          const normalized = (res.data || []).map(inv => ({
+            ...inv,
+            total_charge: +inv.total_charge || 0,
+            carrier_pay: +inv.carrier_pay || 0,
+            bill_date: inv.bill_date ? new Date(inv.bill_date + "T00:00:00Z") : null,
+            shipper_due: inv.shipper_due ? new Date(inv.shipper_due + "T00:00:00Z") : null,
+            carrier_due: inv.carrier_due ? new Date(inv.carrier_due + "T00:00:00Z") : null,
+            shipper_paid: !!inv.shipper_paid,
+            carrier_paid: !!inv.carrier_paid,
+          }));
+          setInvoices(prev => (reset ? normalized : [...prev, ...normalized]));
+          setLastCursor(res.nextCursor);
+          setHasMore(res.nextCursor !== null);
+        } else console.error("Error fetching invoices:", res.error);
+      } catch (err) {
+        console.error("Error fetching invoices:", err);
       }
+      setLoadingInvoices(false);
+    },
+    [user, loadingInvoices, lastCursor]
+  );
+
+  // --- Fetch KPIs ---
+  const loadKPIs = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetchKPIsForBroker(user);
+      if (res.success) setKpis(res.kpis);
+      else console.error("Failed to fetch KPIs:", res.error);
     } catch (err) {
-      console.error("Error fetching invoices:", err);
+      console.error("Error loading KPIs:", err);
     }
-    setLoadingInvoices(false);
-  };
+  }, [user]);
 
-
-  // --- Logout ---
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/";
-  };
+  useEffect(() => {
+    if (!user) return;
+    fetchInvoices(true);
+    loadKPIs();
+  }, [user, fetchInvoices, loadKPIs]);
 
 
   // --- Refresh after upload ---
   const handleInvoiceUpload = async () => {
     await fetchInvoices(true);
+    await loadKPIs();
   };
-
 
   // --- Toggle paid checkbox ---
   const handlePaidToggle = async (invoiceId, field, currentValue) => {
@@ -135,81 +120,67 @@ export default function Frontend() {
     );
     setInvoices(updatedInvoices);
 
-
-    const res = await updateInvoiceStatus(invoiceId, field, !currentValue, user);
-    if (!res.success) {
-      setInvoices(invoices);
-      alert(`Update failed: ${res.error}`);
+    try {
+      const res = await updateInvoiceStatus(invoiceId, field, !currentValue, user);
+      if (!res.success) {
+        setInvoices(invoices); // revert if failed
+        alert(`Update failed: ${res.error}`);
+      } else {
+        await loadKPIs();
+      }
+    } catch (err) {
+      setInvoices(invoices); // revert
+      alert(`Update failed: ${err.message}`);
     }
   };
 
+  // --- Logout ---
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  };
 
-  if (!session) return <div>Loading...</div>;
+  // --- Upload CSV Component ---
+  const UploadCSV = () => {
+    const fileInputRef = useRef(null);
+    const handleFileChange = async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      setUploadStatus("Uploading...");
+      try {
+        const result = await uploadInvoiceFile(file, user);
+        setUploadStatus(result.success ? "✅ Uploaded successfully!" : `❌ Upload failed: ${result.error}`);
+        await handleInvoiceUpload();
+      } catch (err) {
+        setUploadStatus(`❌ Upload failed: ${err.message}`);
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
+    return (
+      <div className="quick-actions horizontal">
+        <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileChange} accept=".csv" />
+        <button className="qa-btn" onClick={() => fileInputRef.current?.click()}>Upload CSV</button>
+        {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
+      </div>
+    );
+  };
 
-
-  // --- Components ---
-  const Filters = ({ searchQuery, onSearchChange }) => (
+  // --- Filters Component ---
+  const Filters = () => (
     <div className="quick-actions horizontal">
       <input
         type="text"
         placeholder="Search invoices..."
         className="search-bar"
         value={searchQuery}
-        onChange={(e) => onSearchChange(e.target.value)}
+        onChange={e => setSearchQuery(e.target.value)}
       />
     </div>
   );
 
-
-  const UploadCSV = ({ onUpload }) => {
-    const fileInputRefInner = useRef(null);
-
-
-    const handleFileChange = async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-
-
-      setUploadStatus("Uploading...");
-      try {
-      const result = await uploadInvoiceFile(file);
-        if (result.success) {
-          setUploadStatus("✅ Uploaded successfully!");
-          if (onUpload) onUpload();
-        } else {
-          setUploadStatus(`❌ Upload failed: ${result.error}`);
-        }
-      } catch (err) {
-        setUploadStatus(`❌ Upload failed: ${err.message}`);
-      }
-
-
-      if (fileInputRefInner.current) fileInputRefInner.current.value = "";
-    };
-
-
-    return (
-      <div className="quick-actions horizontal">
-        <input
-          type="file"
-          ref={fileInputRefInner}
-          style={{ display: "none" }}
-          onChange={handleFileChange}
-          accept=".csv"
-        />
-        <button className="qa-btn" onClick={() => fileInputRefInner.current?.click()}>
-          Upload CSV
-        </button>
-        {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
-      </div>
-    );
-  };
-
-
+  // --- KPI Summary Component ---
   const NetCashSummary = ({ kpis }) => {
-    if (!kpis) return null;
-
-
     const kpiList = [
       { label: "Projected Net Cash Flow", value: kpis.projectedCashFlow, dot: "green" },
       { label: "Actual Net Cash Flow", value: kpis.actualCashFlow, dot: "blue" },
@@ -218,57 +189,39 @@ export default function Frontend() {
       { label: "Overdue Shipper Amount", value: kpis.overdueShipperAmount, dot: "red" },
       { label: "Overdue Carrier Amount", value: kpis.overdueCarrierAmount, dot: "red" },
     ];
-
-
     return (
       <div className="kpi-bar">
-        {kpiList.map((kpi) => (
-          <div className="kpi-card" key={kpi.label}>
-            <div className="kpi-top">
-              <span className={`dot dot-${kpi.dot}`}></span> {kpi.label}
-            </div>
-            <div className={`kpi-value ${kpi.value < 0 ? "negative" : ""}`}>
-              ${Number(kpi.value || 0).toFixed(2)}
-            </div>
+        {kpiList.map(kpi => (
+          <div key={kpi.label} className="kpi-card">
+            <div className="kpi-top"><span className={`dot dot-${kpi.dot}`}></span> {kpi.label}</div>
+            <div className={`kpi-value ${kpi.value < 0 ? "negative" : ""}`}>${kpi.value.toFixed(2)}</div>
           </div>
         ))}
       </div>
     );
   };
 
-
+  // --- Invoice Table Component ---
   const InvoiceTable = ({ invoices, searchQuery }) => {
-    if (!invoices) return null;
-
-
-    const filteredInvoices = invoices.filter((inv) =>
-      JSON.stringify(inv).toLowerCase().includes(searchQuery.toLowerCase())
+    const filtered = invoices.filter(inv =>
+      inv.load_number?.toString().includes(searchQuery) ||
+      inv.shipper?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      inv.carrier?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-
-    const formatDue = (date) => (date ? new Date(date).toLocaleDateString() : "—");
-
-
-    const sortedInvoices = [...filteredInvoices].sort((a, b) => {
-      const aFullyPaid = a.shipper_paid && a.carrier_paid;
-      const bFullyPaid = b.shipper_paid && b.carrier_paid;
-
-
-      if (aFullyPaid && !bFullyPaid) return 1;
-      if (!aFullyPaid && bFullyPaid) return -1;
-
-
-      const aDate = a.bill_date ? new Date(a.bill_date) : new Date(0);
-      const bDate = b.bill_date ? new Date(b.bill_date) : new Date(0);
-      return aDate - bDate;
+    const sorted = [...filtered].sort((a, b) => {
+      const aPaid = a.shipper_paid && a.carrier_paid;
+      const bPaid = b.shipper_paid && b.carrier_paid;
+      if (aPaid && !bPaid) return 1;
+      if (!aPaid && bPaid) return -1;
+      return (a.bill_date || 0) - (b.bill_date || 0);
     });
 
+    const formatDate = d => (d ? new Date(d).toLocaleDateString() : "—");
 
     return (
       <div className="card" style={{ margin: "0 24px 24px" }}>
-        <div className="card-head table-head flex justify-between items-center">
-          <h3>Invoices</h3>
-        </div>
+        <div className="card-head table-head flex justify-between items-center"><h3>Invoices</h3></div>
         <div className="table-wrap">
           <table className="data-table">
             <thead>
@@ -289,52 +242,32 @@ export default function Frontend() {
               </tr>
             </thead>
             <tbody>
-              {sortedInvoices.length === 0 && (
-                <tr>
-                  <td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>
-                    No invoices uploaded yet.
-                  </td>
-                </tr>
-              )}
-              {sortedInvoices.map((inv) => {
-                const netCash = Number(inv.total_charge || 0) - Number(inv.carrier_pay || 0);
-                const shipperTermsDisplay = inv.shipper_due
-                  ? `Net 30 - ${formatDue(inv.shipper_due)}`
-                  : "Net 30 - —";
-                const carrierTermsDisplay = inv.carrier_due
-                  ? `Net 15 - ${formatDue(inv.carrier_due)}`
-                  : "Net 15 - —";
-
-
-                const flaggedReason = flaggedReasonMap[inv.id];
+              {sorted.length === 0 ? (
+                <tr><td colSpan="13" style={{ textAlign: "center", padding: "16px" }}>No invoices uploaded yet.</td></tr>
+              ) : sorted.map(inv => {
+                const netCash = inv.total_charge - inv.carrier_pay;
+                const shipperTerms = `Net 30 - ${formatDate(inv.shipper_due)}`;
+                const carrierTerms = `Net 15 - ${formatDate(inv.carrier_due)}`;
+                const flaggedReason = inv.flagged_reason;
                 const rowClass = flaggedReason ? "row-flagged" : "";
-
 
                 return (
                   <tr key={inv.id} className={rowClass}>
                     <td>{inv.load_number || "—"}</td>
-                    <td>{inv.bill_date ? formatDue(inv.bill_date) : "—"}</td>
+                    <td>{formatDate(inv.bill_date)}</td>
                     <td>{inv.shipper || "—"}</td>
-                    <td style={{ textAlign: "center" }}>{Number(inv.total_charge || 0).toFixed(2)}</td>
-                    <td>{shipperTermsDisplay}</td>
+                    <td style={{ textAlign: "center" }}>{inv.total_charge.toFixed(2)}</td>
+                    <td>{shipperTerms}</td>
                     <td>
-                      <input
-                        type="checkbox"
-                        checked={inv.shipper_paid || false}
-                        className={inv.shipper_paid ? "paid-green" : ""}
-                        onChange={() => handlePaidToggle(inv.id, "shipper_paid", inv.shipper_paid)}
-                      />
+                      <input type="checkbox" checked={inv.shipper_paid} className={inv.shipper_paid ? "paid-green" : ""} 
+                             onChange={() => handlePaidToggle(inv.id, "shipper_paid", inv.shipper_paid)} />
                     </td>
                     <td>{inv.carrier || "—"}</td>
-                    <td style={{ textAlign: "center" }}>{Number(inv.carrier_pay || 0).toFixed(2)}</td>
-                    <td>{carrierTermsDisplay}</td>
+                    <td style={{ textAlign: "center" }}>{inv.carrier_pay.toFixed(2)}</td>
+                    <td>{carrierTerms}</td>
                     <td>
-                      <input
-                        type="checkbox"
-                        checked={inv.carrier_paid || false}
-                        className={inv.carrier_paid ? "paid-green" : ""}
-                        onChange={() => handlePaidToggle(inv.id, "carrier_paid", inv.carrier_paid)}
-                      />
+                      <input type="checkbox" checked={inv.carrier_paid} className={inv.carrier_paid ? "paid-green" : ""} 
+                             onChange={() => handlePaidToggle(inv.id, "carrier_paid", inv.carrier_paid)} />
                     </td>
                     <td className="numeric">${netCash.toFixed(2)}</td>
                     <td>{flaggedReason || "—"}</td>
@@ -349,11 +282,9 @@ export default function Frontend() {
     );
   };
 
-
+  // --- Download CSV ---
   const downloadReport = async () => {
-    if (!invoices || invoices.length === 0) return alert("No invoices to download.");
-
-
+    if (!invoices.length) return alert("No invoices to download.");
     setCsvDownloading(true);
     try {
       const { downloadCSV } = await import("../features/exportCSV");
@@ -365,6 +296,7 @@ export default function Frontend() {
     setCsvDownloading(false);
   };
 
+  if (!session) return <div>Loading...</div>;
 
   return (
     <div className="dashboard-container p-4">
@@ -376,19 +308,16 @@ export default function Frontend() {
         </div>
       </header>
 
-
       <div className="quick-actions flex items-center gap-4 mb-4">
-        <UploadCSV onUpload={handleInvoiceUpload} />
+        <UploadCSV />
         <button className="qa-btn" onClick={downloadReport} disabled={csvDownloading}>
           {csvDownloading ? "Please wait..." : "Download Report"}
         </button>
-        <Filters searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+        <Filters />
       </div>
-
 
       <NetCashSummary kpis={kpis} />
       <InvoiceTable invoices={invoices} searchQuery={searchQuery} />
-
 
       {hasMore && (
         <div style={{ textAlign: "center", margin: "16px 0" }}>

@@ -11,8 +11,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,        // ✅ keeps session in localStorage
-    autoRefreshToken: true,      // ✅ refresh expired tokens automatically
-    detectSessionInUrl: true,    // ✅ ensures magic link sessions get saved
+    persistSession: true,        // keeps session in localStorage
+    autoRefreshToken: true,      // refresh expired tokens automatically
+    detectSessionInUrl: true,    // ensures magic link sessions get saved
   },
 });
+
+// ✅ Utility to attach JWT to supabase client (for backend calls if needed)
+export const attachSession = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    await supabase.auth.setSession(session); // v2 syntax
+  }
+};
