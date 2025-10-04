@@ -29,28 +29,20 @@ export default function Frontend() {
 
   const user = session?.user;
 
-  // --- Auth session setup (fixed) ---
+  // --- Auth session setup (Supabase v2 compatible) ---
 useEffect(() => {
   const initSession = async () => {
     try {
-      const { data } = await supabase.auth.getSession();
-      if (data?.session) {
-        setSession(data.session);
-        // ⚡ Set JWT explicitly for RLS
-        await supabase.auth.setAuth(data.session.access_token);
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) setSession(session);
     } catch (err) {
       console.error("Failed to get session:", err);
     }
   };
   initSession();
 
-  const { data: listener } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-    setSession(newSession);
-    if (newSession) {
-      // ⚡ Set JWT explicitly every time session changes
-      await supabase.auth.setAuth(newSession.access_token);
-    }
+  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    setSession(session);
   });
 
   return () => listener.subscription.unsubscribe();
@@ -141,30 +133,57 @@ useEffect(() => {
   };
 
   // --- Upload CSV Component ---
-  const UploadCSV = () => {
-    const fileInputRef = useRef(null);
-    const handleFileChange = async e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      setUploadStatus("Uploading...");
-      try {
-        const result = await uploadInvoiceFile(file, user);
-        setUploadStatus(result.success ? "✅ Uploaded successfully!" : `❌ Upload failed: ${result.error}`);
-        await handleInvoiceUpload();
-      } catch (err) {
-        setUploadStatus(`❌ Upload failed: ${err.message}`);
-      } finally {
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      }
-    };
-    return (
-      <div className="quick-actions horizontal">
-        <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileChange} accept=".csv" />
-        <button className="qa-btn" onClick={() => fileInputRef.current?.click()}>Upload CSV</button>
-        {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
-      </div>
-    );
+const UploadCSV = () => {
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!user) {
+      setUploadStatus("❌ Upload failed: user not authenticated.");
+      return;
+    }
+
+    setUploadStatus("Uploading...");
+    try {
+      // ✅ Pass the full user object to backend
+      const result = await uploadInvoiceFile(file, user);
+
+      if (!result) throw new Error("No response from server");
+
+      setUploadStatus(
+        result.success
+          ? "✅ Uploaded successfully!"
+          : `❌ Upload failed: ${result.error}`
+      );
+
+      if (result.success) await handleInvoiceUpload();
+    } catch (err) {
+      setUploadStatus(`❌ Upload failed: ${err.message}`);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
+
+  return (
+    <div className="quick-actions horizontal">
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: "none" }}
+        onChange={handleFileChange}
+        accept=".csv"
+      />
+      <button
+        className="qa-btn"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        Upload CSV
+      </button>
+      {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
+    </div>
+  );
+};
 
   // --- Filters Component ---
   const Filters = () => (

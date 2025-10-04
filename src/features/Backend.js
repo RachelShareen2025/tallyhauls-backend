@@ -71,42 +71,37 @@ export const uploadInvoiceFile = async (file, sessionUser) => {
   }
 
   try {
-    // Determine broker timezone safely
     const brokerTimezone = sessionUser.timezone || "America/New_York";
 
-    // 1️⃣ Upload file to storage
+    // 1️⃣ Upload file
     const storageRes = await uploadFileToStorage(file);
     if (!storageRes.success) return storageRes;
 
-    // 2️⃣ Read CSV content
+    // 2️⃣ Parse CSV
     const fileText = await file.text();
     let parsedRows;
     try {
       parsedRows = parseInvoiceCSV(fileText, sessionUser.email, brokerTimezone);
     } catch (err) {
-      // Optional: mark file as failed
-      await uploadFileToStorage(file, true);
+      await uploadFileToStorage(file, true); // mark as failed
       return { success: false, error: `CSV parsing failed: ${err.message}` };
     }
 
-    // 3️⃣ Filter valid rows
     const validRows = parsedRows.filter(row =>
       row.load_number && !isNaN(row.total_charge) && !isNaN(row.carrier_pay)
     );
 
     if (!validRows.length) return { success: false, error: "No valid rows found in CSV." };
 
-    // ⚡ Backfill broker_timezone for each row
     const nowISO = new Date().toISOString();
     const rowsWithFileUrl = validRows.map(row => ({
       ...row,
       file_url: storageRes.fileUrl,
       created_at: nowISO,
       updated_at: nowISO,
-      broker_timezone: brokerTimezone // ✅ add this
+      broker_timezone: brokerTimezone
     }));
 
-    // 4️⃣ Insert rows (RLS-safe)
     const { data, error } = await supabase.from("invoices").insert(rowsWithFileUrl);
     if (error) throw error;
 
@@ -117,15 +112,17 @@ export const uploadInvoiceFile = async (file, sessionUser) => {
   }
 };
 
-
 /* -----------------------------
-   4️⃣ Update Single or Bulk Invoice Status
+   4️⃣ Update Single Invoice Status (Frontend-compatible)
 ----------------------------- */
-export const updateInvoiceStatus = async (invoiceId, field, value) => {
+export const updateInvoiceStatus = async (invoiceId, field, value, sessionUser) => {
+  if (!sessionUser?.email) return { success: false, error: "User session missing." };
+
   try {
     const { error } = await supabase.from("invoices")
       .update({ [field]: value, updated_at: DateTime.utc().toISO() })
-      .eq("id", invoiceId);
+      .eq("id", invoiceId)
+      .eq("broker_email", sessionUser.email); // ⚡ enforce RLS by broker_email
     if (error) throw error;
     return { success: true };
   } catch (err) {
@@ -134,6 +131,9 @@ export const updateInvoiceStatus = async (invoiceId, field, value) => {
   }
 };
 
+/* -----------------------------
+   5️⃣ Bulk Update (unchanged)
+----------------------------- */
 export const bulkUpdateInvoiceStatus = async (invoiceIds, field, value) => {
   try {
     const { error } = await supabase.from("invoices")
@@ -148,7 +148,7 @@ export const bulkUpdateInvoiceStatus = async (invoiceIds, field, value) => {
 };
 
 /* -----------------------------
-   5️⃣ Compute & Update Status
+   6️⃣ Fetch & Compute Status (unchanged)
 ----------------------------- */
 export const computeAndUpdateStatus = async (sessionUser, pageSize = 100) => {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };
@@ -185,7 +185,6 @@ export const computeAndUpdateStatus = async (sessionUser, pageSize = 100) => {
         return { id: inv.id, status };
       });
 
-      // Batch upsert 50 at a time
       for (let i = 0; i < updates.length; i += 50) {
         const batch = updates.slice(i, i + 50);
         const { error: updateError } = await supabase.from("invoices").upsert(batch, { onConflict: ["id"] });
@@ -204,7 +203,7 @@ export const computeAndUpdateStatus = async (sessionUser, pageSize = 100) => {
 };
 
 /* -----------------------------
-   6️⃣ Fetch Invoices Paginated
+   7️⃣ Fetch Invoices Paginated (unchanged)
 ----------------------------- */
 export const fetchInvoicesPaginated = async (sessionUser, pageSize = 50, cursor = null) => {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };
@@ -214,7 +213,7 @@ export const fetchInvoicesPaginated = async (sessionUser, pageSize = 50, cursor 
       .from("invoices")
       .select(`
         id, load_number, total_charge, carrier_pay, shipper_paid, carrier_paid,
-        shipper_due, carrier_due, shipper, carrier, file_url
+        shipper_due, carrier_due, shipper, carrier, file_url, flagged_reason
       `)
       .eq("broker_email", sessionUser.email)
       .order("id", { ascending: true })
