@@ -4,7 +4,7 @@ import { parseInvoiceCSV } from "./parser";
 import { DateTime } from "luxon";
 
 /* -----------------------------
-   1️⃣ Fetch Broker KPIs (DB-safe)
+   1️⃣ Fetch Broker KPIs (DB-safe, all KPIs)
 ----------------------------- */
 export async function fetchKPIsForBroker(sessionUser) {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };
@@ -14,7 +14,11 @@ export async function fetchKPIsForBroker(sessionUser) {
       .from("invoices")
       .select(`
         projectedCashFlow:sum(total_charge) - sum(carrier_pay),
-        actualCashFlow:sum(case when shipper_paid then total_charge else 0 end) - sum(case when carrier_paid then carrier_pay else 0 end),
+        actualCashFlow:sum(
+          case when shipper_paid then total_charge else 0 end
+        ) - sum(
+          case when carrier_paid then carrier_pay else 0 end
+        ),
         totalReceivables:sum(case when shipper_paid = false then total_charge else 0 end),
         totalPayables:sum(case when carrier_paid = false then carrier_pay else 0 end),
         overdueShipperAmount:sum(case when shipper_paid = false and shipper_due < now() then total_charge else 0 end),
@@ -66,9 +70,7 @@ export const uploadFileToStorage = async (file, isFailed = false) => {
    3️⃣ Upload & Insert Invoices (validated, RLS-safe)
 ----------------------------- */
 export const uploadInvoiceFile = async (file, sessionUser) => {
-  if (!sessionUser?.email) {
-    return { success: false, error: "User session missing." };
-  }
+  if (!sessionUser?.email) return { success: false, error: "User session missing." };
 
   try {
     const brokerTimezone = sessionUser.timezone || "America/New_York";
@@ -122,7 +124,7 @@ export const updateInvoiceStatus = async (invoiceId, field, value, sessionUser) 
     const { error } = await supabase.from("invoices")
       .update({ [field]: value, updated_at: DateTime.utc().toISO() })
       .eq("id", invoiceId)
-      .eq("broker_email", sessionUser.email); // ⚡ enforce RLS by broker_email
+      .eq("broker_email", sessionUser.email);
     if (error) throw error;
     return { success: true };
   } catch (err) {
@@ -132,7 +134,7 @@ export const updateInvoiceStatus = async (invoiceId, field, value, sessionUser) 
 };
 
 /* -----------------------------
-   5️⃣ Bulk Update (unchanged)
+   5️⃣ Bulk Update
 ----------------------------- */
 export const bulkUpdateInvoiceStatus = async (invoiceIds, field, value) => {
   try {
@@ -148,7 +150,7 @@ export const bulkUpdateInvoiceStatus = async (invoiceIds, field, value) => {
 };
 
 /* -----------------------------
-   6️⃣ Fetch & Compute Status (unchanged)
+   6️⃣ Compute & Update Invoice Status (timezone-aware)
 ----------------------------- */
 export const computeAndUpdateStatus = async (sessionUser, pageSize = 100) => {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };
@@ -177,8 +179,8 @@ export const computeAndUpdateStatus = async (sessionUser, pageSize = 100) => {
         else if (inv.shipper_paid && inv.carrier_paid) status = "paid";
         else {
           const todayUTC = DateTime.utc();
-          const shipperDue = inv.shipper_due ? DateTime.fromISO(inv.shipper_due, { zone: "utc" }) : null;
-          const carrierDue = inv.carrier_due ? DateTime.fromISO(inv.carrier_due, { zone: "utc" }) : null;
+          const shipperDue = inv.shipper_due ? DateTime.fromISO(inv.shipper_due, { zone: inv.broker_timezone || "America/New_York" }) : null;
+          const carrierDue = inv.carrier_due ? DateTime.fromISO(inv.carrier_due, { zone: inv.broker_timezone || "America/New_York" }) : null;
           if ((!inv.shipper_paid && shipperDue && shipperDue < todayUTC) ||
               (!inv.carrier_paid && carrierDue && carrierDue < todayUTC)) status = "overdue";
         }
@@ -203,7 +205,7 @@ export const computeAndUpdateStatus = async (sessionUser, pageSize = 100) => {
 };
 
 /* -----------------------------
-   7️⃣ Fetch Invoices Paginated (unchanged)
+   7️⃣ Fetch Invoices Paginated
 ----------------------------- */
 export const fetchInvoicesPaginated = async (sessionUser, pageSize = 50, cursor = null) => {
   if (!sessionUser?.email) return { success: false, error: "User session missing." };

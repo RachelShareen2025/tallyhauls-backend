@@ -7,6 +7,7 @@ import {
   fetchInvoicesPaginated,
   fetchKPIsForBroker,
 } from "../features/Backend";
+import { DateTime } from "luxon";
 import "./Dashboard.css";
 
 export default function Frontend() {
@@ -29,25 +30,20 @@ export default function Frontend() {
 
   const user = session?.user;
 
-  // --- Auth session setup (Supabase v2 compatible) ---
-useEffect(() => {
-  const initSession = async () => {
-    try {
+  // --- Auth session setup ---
+  useEffect(() => {
+    const initSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) setSession(session);
-    } catch (err) {
-      console.error("Failed to get session:", err);
-    }
-  };
-  initSession();
+    };
+    initSession();
 
-  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-    setSession(session);
-  });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
 
-  return () => listener.subscription.unsubscribe();
-}, []);
-
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   // --- Fetch invoices ---
   const fetchInvoices = useCallback(
@@ -58,16 +54,19 @@ useEffect(() => {
         const cursor = reset ? null : lastCursor;
         const res = await fetchInvoicesPaginated(user, 50, cursor);
         if (res.success) {
-          const normalized = (res.data || []).map(inv => ({
-            ...inv,
-            total_charge: +inv.total_charge || 0,
-            carrier_pay: +inv.carrier_pay || 0,
-            bill_date: inv.bill_date ? new Date(inv.bill_date + "T00:00:00Z") : null,
-            shipper_due: inv.shipper_due ? new Date(inv.shipper_due + "T00:00:00Z") : null,
-            carrier_due: inv.carrier_due ? new Date(inv.carrier_due + "T00:00:00Z") : null,
-            shipper_paid: !!inv.shipper_paid,
-            carrier_paid: !!inv.carrier_paid,
-          }));
+          const normalized = (res.data || []).map(inv => {
+            const tz = user?.timezone || "America/New_York";
+            return {
+              ...inv,
+              total_charge: +inv.total_charge || 0,
+              carrier_pay: +inv.carrier_pay || 0,
+              bill_date: inv.bill_date ? DateTime.fromISO(inv.bill_date, { zone: tz }).toJSDate() : null,
+              shipper_due: inv.shipper_due ? DateTime.fromISO(inv.shipper_due, { zone: tz }).toJSDate() : null,
+              carrier_due: inv.carrier_due ? DateTime.fromISO(inv.carrier_due, { zone: tz }).toJSDate() : null,
+              shipper_paid: !!inv.shipper_paid,
+              carrier_paid: !!inv.carrier_paid,
+            };
+          });
           setInvoices(prev => (reset ? normalized : [...prev, ...normalized]));
           setLastCursor(res.nextCursor);
           setHasMore(res.nextCursor !== null);
@@ -97,7 +96,6 @@ useEffect(() => {
     fetchInvoices(true);
     loadKPIs();
   }, [user, fetchInvoices, loadKPIs]);
-
 
   // --- Refresh after upload ---
   const handleInvoiceUpload = async () => {
@@ -133,57 +131,49 @@ useEffect(() => {
   };
 
   // --- Upload CSV Component ---
-const UploadCSV = () => {
-  const fileInputRef = useRef(null);
+  const UploadCSV = () => {
+    const fileInputRef = useRef(null);
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!user) {
-      setUploadStatus("❌ Upload failed: user not authenticated.");
-      return;
-    }
+    const handleFileChange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!user) {
+        setUploadStatus("❌ Upload failed: user not authenticated.");
+        return;
+      }
 
-    setUploadStatus("Uploading...");
-    try {
-      // ✅ Pass the full user object to backend
-      const result = await uploadInvoiceFile(file, user);
+      setUploadStatus("Uploading...");
+      try {
+        const result = await uploadInvoiceFile(file, user);
+        setUploadStatus(
+          result.success
+            ? "✅ Uploaded successfully!"
+            : `❌ Upload failed: ${result.error}`
+        );
+        if (result.success) await handleInvoiceUpload();
+      } catch (err) {
+        setUploadStatus(`❌ Upload failed: ${err.message}`);
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
 
-      if (!result) throw new Error("No response from server");
-
-      setUploadStatus(
-        result.success
-          ? "✅ Uploaded successfully!"
-          : `❌ Upload failed: ${result.error}`
-      );
-
-      if (result.success) await handleInvoiceUpload();
-    } catch (err) {
-      setUploadStatus(`❌ Upload failed: ${err.message}`);
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+    return (
+      <div className="quick-actions horizontal">
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: "none" }}
+          onChange={handleFileChange}
+          accept=".csv"
+        />
+        <button className="qa-btn" onClick={() => fileInputRef.current?.click()}>
+          Upload CSV
+        </button>
+        {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
+      </div>
+    );
   };
-
-  return (
-    <div className="quick-actions horizontal">
-      <input
-        type="file"
-        ref={fileInputRef}
-        style={{ display: "none" }}
-        onChange={handleFileChange}
-        accept=".csv"
-      />
-      <button
-        className="qa-btn"
-        onClick={() => fileInputRef.current?.click()}
-      >
-        Upload CSV
-      </button>
-      {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
-    </div>
-  );
-};
 
   // --- Filters Component ---
   const Filters = () => (
@@ -236,7 +226,7 @@ const UploadCSV = () => {
       return (a.bill_date || 0) - (b.bill_date || 0);
     });
 
-    const formatDate = d => (d ? new Date(d).toLocaleDateString() : "—");
+    const formatDate = d => (d ? DateTime.fromJSDate(d).toLocaleString(DateTime.DATE_MED) : "—");
 
     return (
       <div className="card" style={{ margin: "0 24px 24px" }}>
@@ -307,7 +297,7 @@ const UploadCSV = () => {
     setCsvDownloading(true);
     try {
       const { downloadCSV } = await import("../features/exportCSV");
-      downloadCSV(invoices, `TallyHauls_Report_${new Date().toISOString()}.csv`);
+      downloadCSV(invoices, `TallyHauls_Report_${DateTime.now().toISO()}.csv`);
     } catch (err) {
       console.error("CSV download failed:", err);
       alert("CSV download failed: " + err.message);
